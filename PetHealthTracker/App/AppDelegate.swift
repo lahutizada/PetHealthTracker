@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  PetHealthTracker
 //
-//  Created by Ruslan Lahutizada on 14.03.26.
+//  Created by Ruslan Lahutizada on 28.02.26.
 //
 
 import UIKit
