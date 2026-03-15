@@ -276,7 +276,6 @@ final class LoginController: BaseController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        bindViewModel()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -287,32 +286,6 @@ final class LoginController: BaseController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         navigationController?.setNavigationBarHidden(false, animated: false)
-    }
-
-    // MARK: - Bindings
-
-    private func bindViewModel() {
-        viewModel.onError = { [weak self] message in
-            guard let self else { return }
-
-            if let message, !message.isEmpty {
-                self.errorLabel.text = message
-                self.errorLabel.isHidden = false
-            } else {
-                self.errorLabel.text = nil
-                self.errorLabel.isHidden = true
-            }
-        }
-
-        viewModel.onLoadingStateChanged = { [weak self] isLoading in
-            guard let self else { return }
-            self.loginButton.isEnabled = !isLoading
-            self.loginButton.alpha = isLoading ? 0.7 : 1.0
-        }
-
-        viewModel.onLoginSuccess = { [weak self] in
-            self?.onLoginSuccess?()
-        }
     }
 
     // MARK: - Actions
@@ -494,7 +467,29 @@ final class LoginController: BaseController {
         ])
     }
 
-    override func configureViewModel() {}
+    override func configureViewModel() {
+        viewModel.onError = { [weak self] message in
+            guard let self else { return }
+
+            if let message, !message.isEmpty {
+                self.errorLabel.text = message
+                self.errorLabel.isHidden = false
+            } else {
+                self.errorLabel.text = nil
+                self.errorLabel.isHidden = true
+            }
+        }
+
+        viewModel.onLoadingStateChanged = { [weak self] isLoading in
+            guard let self else { return }
+            self.loginButton.isEnabled = !isLoading
+            self.loginButton.alpha = isLoading ? 0.7 : 1.0
+        }
+
+        viewModel.onLoginSuccess = { [weak self] in
+            self?.onLoginSuccess?()
+        }
+    }
 }
 
 // MARK: - UIScrollViewDelegate
