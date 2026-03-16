@@ -40,6 +40,15 @@ final class AuthCoordinator: Coordinator {
 
     func showRegister() {
         let controller = RegisterController()
+
+        controller.onBackToLogin = { [weak self] in
+            self?.navigationController.popViewController(animated: true)
+        }
+
+        controller.onRegisterSuccess = { [weak self] in
+            self?.onAuthSuccess?()
+        }
+
         navigationController.pushViewController(controller, animated: true)
     }
 
