@@ -23,6 +23,14 @@ final class PetsService: PetsServicing {
         )
     }
     
+    func getPet(id: String) async throws -> PetResponse {
+        try await APIClient.shared.request(
+            endpoint: "/pets/\(id)",
+            method: "GET",
+            requiresAuth: true
+        )
+    }
+    
     func createPet(_ requestModel: CreatePetRequest) async throws -> PetResponse {
         let body = try JSONEncoder().encode(requestModel)
         

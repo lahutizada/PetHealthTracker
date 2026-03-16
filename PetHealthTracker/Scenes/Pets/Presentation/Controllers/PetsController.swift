@@ -79,6 +79,12 @@ final class PetsController: BaseController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.refreshControl = refreshControl
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(refreshPets),
+            name: .highlightedPetChanged,
+            object: nil
+        )
     }
     
     override func viewWillAppear(_ animated: Bool) {

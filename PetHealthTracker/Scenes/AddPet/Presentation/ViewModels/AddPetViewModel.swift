@@ -12,8 +12,19 @@ protocol AddPetViewModelProtocol: AnyObject {
     var onPetCreated: ((PetResponse) -> Void)? { get set }
     var onError: ((String?) -> Void)? { get set }
     
-    func savePet(
-        mode: PetFormMode,
+    func createPet(
+        species: String?,
+        name: String?,
+        sex: String?,
+        neutered: Bool,
+        breed: String?,
+        dob: String?,
+        weight: Double?,
+        image: UIImage?
+    )
+    
+    func updatePet(
+        id: String,
         species: String?,
         name: String?,
         sex: String?,
@@ -35,17 +46,76 @@ final class AddPetViewModel: AddPetViewModelProtocol {
     
     private let createPetUseCase: CreatePetUseCaseProtocol
     private let uploadPetPhotoUseCase: UploadPetPhotoUseCaseProtocol
+    private let petsService: PetsServicing
     
     init(
         createPetUseCase: CreatePetUseCaseProtocol = CreatePetUseCase(),
-        uploadPetPhotoUseCase: UploadPetPhotoUseCaseProtocol = UploadPetPhotoUseCase()
+        uploadPetPhotoUseCase: UploadPetPhotoUseCaseProtocol = UploadPetPhotoUseCase(),
+        petsService: PetsServicing = PetsService.shared
     ) {
         self.createPetUseCase = createPetUseCase
         self.uploadPetPhotoUseCase = uploadPetPhotoUseCase
+        self.petsService = petsService
     }
     
-    func savePet(
-        mode: PetFormMode,
+    func createPet(
+        species: String?,
+        name: String?,
+        sex: String?,
+        neutered: Bool,
+        breed: String?,
+        dob: String?,
+        weight: Double?,
+        image: UIImage?
+    ) {
+        savePet(
+            mode: .create,
+            petId: nil,
+            species: species,
+            name: name,
+            sex: sex,
+            neutered: neutered,
+            breed: breed,
+            dob: dob,
+            weight: weight,
+            image: image
+        )
+    }
+    
+    func updatePet(
+        id: String,
+        species: String?,
+        name: String?,
+        sex: String?,
+        neutered: Bool,
+        breed: String?,
+        dob: String?,
+        weight: Double?,
+        image: UIImage?
+    ) {
+        savePet(
+            mode: .editPlaceholder,
+            petId: id,
+            species: species,
+            name: name,
+            sex: sex,
+            neutered: neutered,
+            breed: breed,
+            dob: dob,
+            weight: weight,
+            image: image
+        )
+    }
+    
+    func clearError() {
+        onError?(nil)
+    }
+    
+    // MARK: - Private
+    
+    private func savePet(
+        mode: SaveMode,
+        petId: String?,
         species: String?,
         name: String?,
         sex: String?,
@@ -102,8 +172,16 @@ final class AddPetViewModel: AddPetViewModelProtocol {
                 switch mode {
                 case .create:
                     savedPet = try await createPetUseCase.execute(requestModel: request)
-                case .edit(let pet):
-                    savedPet = try await createPetUseCase.update(id: pet.id, requestModel: request)
+                    
+                case .editPlaceholder:
+                    guard let petId else {
+                        throw NSError(
+                            domain: "AddPetViewModel",
+                            code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: "Pet id is missing"]
+                        )
+                    }
+                    savedPet = try await petsService.updatePet(id: petId, requestModel: request)
                 }
                 
                 let finalPet: PetResponse
@@ -129,8 +207,11 @@ final class AddPetViewModel: AddPetViewModelProtocol {
             }
         }
     }
-    
-    func clearError() {
-        onError?(nil)
+}
+
+private extension AddPetViewModel {
+    enum SaveMode {
+        case create
+        case editPlaceholder
     }
 }

@@ -9,6 +9,7 @@ import UIKit
 
 protocol PetsServicing {
     func getPets() async throws -> [PetResponse]
+    func getPet(id: String) async throws -> PetResponse
     func createPet(_ requestModel: CreatePetRequest) async throws -> PetResponse
     func updatePet(id: String, requestModel: CreatePetRequest) async throws -> PetResponse
     func deletePet(id: String) async throws

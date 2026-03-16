@@ -130,4 +130,14 @@ final class DIContainer {
             uploadPetPhotoUseCase: makeUploadPetPhotoUseCase()
         )
     }
+    
+    func makePetDetailsViewModel(petId: String) -> PetDetailsViewModelProtocol {
+
+        PetDetailsViewModel(
+            petId: petId,
+            getPetDetailsUseCase: GetPetDetailsUseCase(),
+            setHighlightedPetUseCase: SetHighlightedPetUseCase()
+        )
+
+    }
 }

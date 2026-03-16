@@ -10,6 +10,7 @@ import PhotosUI
 
 final class AddPetController: BaseController {
     
+    var onPetSaved: ((PetResponse) -> Void)?
     private let mode: PetFormMode
     private let viewModel: AddPetViewModelProtocol
     
@@ -469,8 +470,10 @@ final class AddPetController: BaseController {
             self.errorLabel.isHidden = (message == nil || message?.isEmpty == true)
         }
         
-        viewModel.onPetCreated = { [weak self] _ in
-            self?.navigationController?.popViewController(animated: true)
+        viewModel.onPetCreated = { [weak self] pet in
+            guard let self else { return }
+            self.onPetSaved?(pet)
+            self.navigationController?.popViewController(animated: true)
         }
     }
     
@@ -724,21 +727,32 @@ final class AddPetController: BaseController {
         
         let weight = Double(cleanWeight ?? "")
         
-        print("RAW weight text:", weightTextField.text ?? "nil")
-        print("CLEAN weight text:", cleanWeight ?? "nil")
-        print("PARSED weight:", weight as Any)
-        
-        viewModel.savePet(
-            mode: mode,
-            species: selectedSpecies.rawValue,
-            name: nameTextField.text,
-            sex: selectedGender.rawValue,
-            neutered: neuteredSwitch.isOn,
-            breed: selectedBreed ?? breedTextField.text,
-            dob: formattedISODate(),
-            weight: weight,
-            image: selectedImage
-        )
+        switch mode {
+        case .create:
+            viewModel.createPet(
+                species: selectedSpecies.rawValue,
+                name: nameTextField.text,
+                sex: selectedGender.rawValue,
+                neutered: neuteredSwitch.isOn,
+                breed: selectedBreed ?? breedTextField.text,
+                dob: formattedISODate(),
+                weight: weight,
+                image: selectedImage
+            )
+            
+        case .edit(let pet):
+            viewModel.updatePet(
+                id: pet.id,
+                species: selectedSpecies.rawValue,
+                name: nameTextField.text,
+                sex: selectedGender.rawValue,
+                neutered: neuteredSwitch.isOn,
+                breed: selectedBreed ?? breedTextField.text,
+                dob: formattedISODate(),
+                weight: weight,
+                image: selectedImage
+            )
+        }
     }
     
     @objc private func clearError() {
