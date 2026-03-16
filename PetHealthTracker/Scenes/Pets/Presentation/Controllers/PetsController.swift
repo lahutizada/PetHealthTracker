@@ -11,12 +11,12 @@ final class PetsController: BaseController {
     
     private let viewModel: PetsViewModelProtocol
     private var pets: [PetResponse] = []
-
+    
     init(viewModel: PetsViewModelProtocol = DIContainer.shared.makePetsViewModel()) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -83,6 +83,7 @@ final class PetsController: BaseController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
         viewModel.loadPets()
     }
     
@@ -90,7 +91,6 @@ final class PetsController: BaseController {
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
         
         view.addSubview(titleLabel)
         view.addSubview(addButton)
@@ -133,12 +133,30 @@ final class PetsController: BaseController {
             guard let self else { return }
             
             self.pets = pets
-            self.tableView.reloadData()
             self.emptyStateLabel.isHidden = !pets.isEmpty
+            
+            UIView.transition(
+                with: self.tableView,
+                duration: 0.2,
+                options: .transitionCrossDissolve,
+                animations: {
+                    self.tableView.reloadData()
+                }
+            )
         }
         
-        viewModel.onError = { error in
-            print("Pets error:", error)
+        viewModel.onError = { [weak self] error in
+            guard let self else { return }
+            
+            self.refreshControl.endRefreshing()
+            
+            let alert = UIAlertController(
+                title: "Error",
+                message: error,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self.present(alert, animated: true)
         }
     }
     
@@ -149,7 +167,7 @@ final class PetsController: BaseController {
     }
     
     @objc private func addPetTapped() {
-        let vc = AddPetController()
+        let vc = AddPetController(mode: .create)
         navigationController?.pushViewController(vc, animated: true)
     }
     
@@ -167,17 +185,29 @@ final class PetsController: BaseController {
         
         present(alert, animated: true)
     }
-
+    
     private func deletePet(_ pet: PetResponse) {
         Task {
             do {
                 try await PetsService.shared.deletePet(id: pet.id)
                 
-                DispatchQueue.main.async {
-                    self.viewModel.loadPets()
+                await MainActor.run {
+                    self.pets.removeAll { $0.id == pet.id }
+                    self.emptyStateLabel.isHidden = !self.pets.isEmpty
+                    
+                    UIView.transition(
+                        with: self.tableView,
+                        duration: 0.2,
+                        options: .transitionCrossDissolve,
+                        animations: {
+                            self.tableView.reloadData()
+                        }
+                    )
                 }
+                
+                viewModel.refreshPets()
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     let alert = UIAlertController(
                         title: "Error",
                         message: "Failed to delete pet",
@@ -189,8 +219,6 @@ final class PetsController: BaseController {
             }
         }
     }
-    
-    
 }
 
 // MARK: - UITableViewDataSource
@@ -201,10 +229,7 @@ extension PetsController: UITableViewDataSource {
         pets.count
     }
     
-    func tableView(
-        _ tableView: UITableView,
-        cellForRowAt indexPath: IndexPath
-    ) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: PetCardCell.identifier,
             for: indexPath
@@ -235,7 +260,7 @@ extension PetsController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         
         let pet = pets[indexPath.row]
-        let vc = AddPetController(mode: .edit(pet))
+        let vc = PetDetailsController(pet: pet)
         navigationController?.pushViewController(vc, animated: true)
     }
     

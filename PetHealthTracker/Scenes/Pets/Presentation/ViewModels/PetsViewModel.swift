@@ -26,6 +26,8 @@ final class PetsViewModel: PetsViewModelProtocol {
     private let getPetsUseCase: GetPetsUseCaseProtocol
     private let setHighlightedPetUseCase: SetHighlightedPetUseCaseProtocol
 
+    private var pets: [PetResponse] = []
+
     init(
         getPetsUseCase: GetPetsUseCaseProtocol = GetPetsUseCase(),
         setHighlightedPetUseCase: SetHighlightedPetUseCaseProtocol = SetHighlightedPetUseCase()
@@ -40,9 +42,8 @@ final class PetsViewModel: PetsViewModelProtocol {
         Task {
             do {
                 let response = try await getPetsUseCase.execute()
-                let sortedPets = response.sorted {
-                    ($0.isHighlighted ?? false) && !($1.isHighlighted ?? false)
-                }
+                let sortedPets = sortPets(response)
+                self.pets = sortedPets
 
                 await MainActor.run {
                     self.onLoadingStateChanged?(false)
@@ -62,27 +63,50 @@ final class PetsViewModel: PetsViewModelProtocol {
     }
 
     func setMainPet(_ pet: PetResponse) {
-        onLoadingStateChanged?(true)
+        guard pet.isHighlighted != true else { return }
 
         Task {
             do {
-                _ = try await setHighlightedPetUseCase.execute(id: pet.id)
-                let response = try await getPetsUseCase.execute()
-                let sortedPets = response.sorted {
-                    ($0.isHighlighted ?? false) && !($1.isHighlighted ?? false)
+                let updatedPet = try await setHighlightedPetUseCase.execute(id: pet.id)
+
+                let updatedPets = pets.map { currentPet in
+                    PetResponse(
+                        id: currentPet.id,
+                        userId: currentPet.userId,
+                        species: currentPet.species,
+                        name: currentPet.name,
+                        sex: currentPet.sex,
+                        neutered: currentPet.neutered,
+                        breed: currentPet.breed,
+                        dob: currentPet.dob,
+                        weight: currentPet.weight,
+                        photoUrl: currentPet.photoUrl,
+                        status: currentPet.status,
+                        statusText: currentPet.statusText,
+                        isHighlighted: currentPet.id == updatedPet.id,
+                        createdAt: currentPet.createdAt,
+                        updatedAt: currentPet.updatedAt
+                    )
                 }
 
+                let sortedPets = sortPets(updatedPets)
+                self.pets = sortedPets
+
                 await MainActor.run {
-                    self.onLoadingStateChanged?(false)
                     NotificationCenter.default.post(name: .highlightedPetChanged, object: nil)
                     self.onPetsLoaded?(sortedPets)
                 }
             } catch {
                 await MainActor.run {
-                    self.onLoadingStateChanged?(false)
                     self.onError?("Failed to set main pet")
                 }
             }
+        }
+    }
+
+    private func sortPets(_ pets: [PetResponse]) -> [PetResponse] {
+        pets.sorted {
+            ($0.isHighlighted ?? false) && !($1.isHighlighted ?? false)
         }
     }
 }
