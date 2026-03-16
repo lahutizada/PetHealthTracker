@@ -12,13 +12,15 @@ protocol AddPetViewModelProtocol: AnyObject {
     var onPetCreated: ((PetResponse) -> Void)? { get set }
     var onError: ((String?) -> Void)? { get set }
     
-    func createPet(
+    func savePet(
+        mode: PetFormMode,
         species: String?,
         name: String?,
         sex: String?,
         neutered: Bool,
         breed: String?,
         dob: String?,
+        weight: Double?,
         image: UIImage?
     )
     
@@ -42,13 +44,15 @@ final class AddPetViewModel: AddPetViewModelProtocol {
         self.uploadPetPhotoUseCase = uploadPetPhotoUseCase
     }
     
-    func createPet(
+    func savePet(
+        mode: PetFormMode,
         species: String?,
         name: String?,
         sex: String?,
         neutered: Bool,
         breed: String?,
         dob: String?,
+        weight: Double?,
         image: UIImage?
     ) {
         clearError()
@@ -74,30 +78,43 @@ final class AddPetViewModel: AddPetViewModelProtocol {
             return
         }
         
+        if let weight, weight <= 0 {
+            onError?("Weight must be greater than 0")
+            return
+        }
+        
+        let request = CreatePetRequest(
+            species: cleanSpecies,
+            name: cleanName,
+            sex: cleanSex,
+            neutered: neutered,
+            breed: cleanBreed?.isEmpty == true ? nil : cleanBreed,
+            dob: cleanDob?.isEmpty == true ? nil : cleanDob,
+            weight: weight
+        )
+        
         onLoadingStateChanged?(true)
         
         Task {
             do {
-                let createdPet = try await createPetUseCase.execute(
-                    requestModel: CreatePetRequest(
-                        species: cleanSpecies,
-                        name: cleanName,
-                        sex: cleanSex,
-                        neutered: neutered,
-                        breed: cleanBreed?.isEmpty == true ? nil : cleanBreed,
-                        dob: cleanDob?.isEmpty == true ? nil : cleanDob
-                    )
-                )
+                let savedPet: PetResponse
+                
+                switch mode {
+                case .create:
+                    savedPet = try await createPetUseCase.execute(requestModel: request)
+                case .edit(let pet):
+                    savedPet = try await createPetUseCase.update(id: pet.id, requestModel: request)
+                }
                 
                 let finalPet: PetResponse
                 
                 if let image {
                     finalPet = try await uploadPetPhotoUseCase.execute(
-                        petId: createdPet.id,
+                        petId: savedPet.id,
                         image: image
                     )
                 } else {
-                    finalPet = createdPet
+                    finalPet = savedPet
                 }
                 
                 await MainActor.run {
@@ -107,7 +124,7 @@ final class AddPetViewModel: AddPetViewModelProtocol {
             } catch {
                 await MainActor.run {
                     self.onLoadingStateChanged?(false)
-                    self.onError?("Failed to create pet")
+                    self.onError?("Failed to save pet")
                 }
             }
         }

@@ -36,8 +36,6 @@ final class AddPetController: BaseController {
         case female = "FEMALE"
     }
     
-    // MARK: - Data
-    
     private var selectedSpecies: Species = .dog {
         didSet {
             selectedBreed = nil
@@ -65,12 +63,8 @@ final class AddPetController: BaseController {
         selectedSpecies == .dog ? dogBreeds : catBreeds
     }
     
-    // MARK: - Pickers
-    
     private let breedPicker = UIPickerView()
     private let datePicker = UIDatePicker()
-    
-    // MARK: - UI
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -126,10 +120,14 @@ final class AddPetController: BaseController {
     
     private lazy var editPhotoButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "pencil"), for: .normal)
+        button.setImage(UIImage(systemName: "plus"), for: .normal)
         button.tintColor = .white
         button.backgroundColor = .mainBlue
         button.layer.cornerRadius = 18
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.12
+        button.layer.shadowRadius = 8
+        button.layer.shadowOffset = CGSize(width: 0, height: 3)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(selectPhotoTapped), for: .touchUpInside)
         return button
@@ -165,11 +163,9 @@ final class AddPetController: BaseController {
             .init(title: "Dog", selectedIcon: "dog.blue", unselectedIcon: "dog.standard"),
             .init(title: "Cat", selectedIcon: "cat.blue", unselectedIcon: "cat.standard")
         ])
-        
         view.onSelectionChanged = { [weak self] index in
             self?.selectedSpecies = index == 0 ? .dog : .cat
         }
-        
         return view
     }()
     
@@ -178,11 +174,9 @@ final class AddPetController: BaseController {
             .init(title: "Male", selectedIcon: "male.blue", unselectedIcon: "male.standard"),
             .init(title: "Female", selectedIcon: "female.blue", unselectedIcon: "female.standard")
         ])
-        
         view.onSelectionChanged = { [weak self] index in
             self?.selectedGender = index == 0 ? .male : .female
         }
-        
         return view
     }()
     
@@ -286,8 +280,6 @@ final class AddPetController: BaseController {
         return button
     }()
     
-    // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         configurePickers()
@@ -302,8 +294,6 @@ final class AddPetController: BaseController {
         scrollView.contentInset.bottom = 0
         scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
-    
-    // MARK: - BaseController
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -366,8 +356,8 @@ final class AddPetController: BaseController {
             
             petImageView.centerXAnchor.constraint(equalTo: photoContainer.centerXAnchor),
             petImageView.centerYAnchor.constraint(equalTo: photoContainer.centerYAnchor),
-            petImageView.widthAnchor.constraint(equalToConstant: 140),
-            petImageView.heightAnchor.constraint(equalToConstant: 140),
+            petImageView.widthAnchor.constraint(equalToConstant: 44),
+            petImageView.heightAnchor.constraint(equalToConstant: 44),
             
             editPhotoButton.widthAnchor.constraint(equalToConstant: 36),
             editPhotoButton.heightAnchor.constraint(equalToConstant: 36),
@@ -475,23 +465,14 @@ final class AddPetController: BaseController {
         
         viewModel.onError = { [weak self] message in
             guard let self else { return }
-            
-            if let message, !message.isEmpty {
-                self.errorLabel.text = message
-                self.errorLabel.isHidden = false
-            } else {
-                self.errorLabel.text = nil
-                self.errorLabel.isHidden = true
-            }
+            self.errorLabel.text = message
+            self.errorLabel.isHidden = (message == nil || message?.isEmpty == true)
         }
         
         viewModel.onPetCreated = { [weak self] _ in
-            guard let self else { return }
-            self.navigationController?.popViewController(animated: true)
+            self?.navigationController?.popViewController(animated: true)
         }
     }
-    
-    // MARK: - Setup
     
     private func configurePickers() {
         breedPicker.delegate = self
@@ -530,7 +511,7 @@ final class AddPetController: BaseController {
     private func applyModeIfNeeded() {
         switch mode {
         case .create:
-            break
+            showPlaceholderIcon()
             
         case .edit(let pet):
             headerLabel.text = "Edit Pet"
@@ -547,6 +528,10 @@ final class AddPetController: BaseController {
             breedTextField.text = pet.breed
             neuteredSwitch.isOn = pet.neutered
             
+            if let weight = pet.weight {
+                weightTextField.text = String(weight)
+            }
+            
             if let dob = pet.dob {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy-MM-dd"
@@ -558,11 +543,100 @@ final class AddPetController: BaseController {
             
             if let photoUrl = pet.photoUrl,
                let url = URL(string: photoUrl) {
-                petImageView.setImage(from: url)
-                petImageView.contentMode = .scaleAspectFill
-                petImageView.clipsToBounds = true
+                showPetImage(from: url)
+            } else {
+                showPlaceholderIcon()
             }
         }
+    }
+    
+    private func setAddPhotoButtonStyle() {
+        editPhotoButton.setImage(UIImage(systemName: "plus"), for: .normal)
+    }
+    
+    private func setChangePhotoButtonStyle() {
+        editPhotoButton.setImage(UIImage(systemName: "camera.fill"), for: .normal)
+    }
+    
+    private func showPlaceholderIcon() {
+        selectedImage = nil
+        photoContainer.layer.borderWidth = 1.5
+        
+        petImageView.image = UIImage(systemName: "camera")
+        petImageView.tintColor = .mainBlue
+        petImageView.contentMode = .scaleAspectFit
+        petImageView.layer.cornerRadius = 0
+        petImageView.clipsToBounds = false
+        
+        petImageView.constraints.forEach {
+            if $0.firstAttribute == .width || $0.firstAttribute == .height {
+                $0.constant = 44
+            }
+        }
+        
+        setAddPhotoButtonStyle()
+        
+        UIView.animate(withDuration: 0.2) {
+            self.photoContainer.layoutIfNeeded()
+        }
+    }
+    
+    private func showPetImage(_ image: UIImage) {
+        photoContainer.layer.borderWidth = 0
+        
+        petImageView.image = image
+        petImageView.tintColor = nil
+        petImageView.contentMode = .scaleAspectFill
+        petImageView.layer.cornerRadius = 70
+        petImageView.clipsToBounds = true
+        
+        petImageView.constraints.forEach {
+            if $0.firstAttribute == .width || $0.firstAttribute == .height {
+                $0.constant = 140
+            }
+        }
+        
+        setChangePhotoButtonStyle()
+        
+        UIView.animate(withDuration: 0.25) {
+            self.photoContainer.layoutIfNeeded()
+        }
+    }
+    
+    private func showPetImage(from url: URL) {
+        photoContainer.layer.borderWidth = 0
+        
+        petImageView.tintColor = nil
+        petImageView.contentMode = .scaleAspectFill
+        petImageView.layer.cornerRadius = 70
+        petImageView.clipsToBounds = true
+        
+        petImageView.constraints.forEach {
+            if $0.firstAttribute == .width || $0.firstAttribute == .height {
+                $0.constant = 140
+            }
+        }
+        
+        setChangePhotoButtonStyle()
+        petImageView.setImage(from: url)
+        
+        UIView.animate(withDuration: 0.25) {
+            self.photoContainer.layoutIfNeeded()
+        }
+    }
+    
+    private func openPhotoPicker() {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        config.selectionLimit = 1
+        
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+    
+    private func removePhoto() {
+        showPlaceholderIcon()
     }
     
     private func makeToolbar() -> UIToolbar {
@@ -603,20 +677,29 @@ final class AddPetController: BaseController {
         birthDateTextField.text = formatter.string(from: datePicker.date)
     }
     
-    // MARK: - Actions
-    
     @objc private func backTapped() {
         navigationController?.popViewController(animated: true)
     }
     
     @objc private func selectPhotoTapped() {
-        var config = PHPickerConfiguration()
-        config.filter = .images
-        config.selectionLimit = 1
+        let hasPhoto = selectedImage != nil || petImageView.image != UIImage(systemName: "camera")
         
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = self
-        present(picker, animated: true)
+        if hasPhoto {
+            let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+            
+            sheet.addAction(UIAlertAction(title: "Change Photo", style: .default) { _ in
+                self.openPhotoPicker()
+            })
+            
+            sheet.addAction(UIAlertAction(title: "Remove Photo", style: .destructive) { _ in
+                self.removePhoto()
+            })
+            
+            sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            present(sheet, animated: true)
+        } else {
+            openPhotoPicker()
+        }
     }
     
     @objc private func doneTapped() {
@@ -635,13 +718,25 @@ final class AddPetController: BaseController {
     }
     
     @objc private func saveTapped() {
-        viewModel.createPet(
+        let cleanWeight = weightTextField.text?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        
+        let weight = Double(cleanWeight ?? "")
+        
+        print("RAW weight text:", weightTextField.text ?? "nil")
+        print("CLEAN weight text:", cleanWeight ?? "nil")
+        print("PARSED weight:", weight as Any)
+        
+        viewModel.savePet(
+            mode: mode,
             species: selectedSpecies.rawValue,
             name: nameTextField.text,
             sex: selectedGender.rawValue,
             neutered: neuteredSwitch.isOn,
             breed: selectedBreed ?? breedTextField.text,
             dob: formattedISODate(),
+            weight: weight,
             image: selectedImage
         )
     }
@@ -672,8 +767,6 @@ final class AddPetController: BaseController {
     }
 }
 
-// MARK: - UIPickerViewDelegate, UIPickerViewDataSource
-
 extension AddPetController: UIPickerViewDelegate, UIPickerViewDataSource {
     func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
     
@@ -685,8 +778,6 @@ extension AddPetController: UIPickerViewDelegate, UIPickerViewDataSource {
         currentBreeds[row]
     }
 }
-
-// MARK: - PHPickerViewControllerDelegate
 
 extension AddPetController: PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
@@ -700,11 +791,7 @@ extension AddPetController: PHPickerViewControllerDelegate {
             
             DispatchQueue.main.async {
                 self.selectedImage = image
-                self.petImageView.image = image
-                self.petImageView.tintColor = nil
-                self.petImageView.contentMode = .scaleAspectFill
-                self.petImageView.clipsToBounds = true
-                self.petImageView.layer.cornerRadius = 70
+                self.showPetImage(image)
             }
         }
     }

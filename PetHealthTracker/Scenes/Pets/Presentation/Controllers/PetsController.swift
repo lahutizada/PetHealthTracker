@@ -152,6 +152,45 @@ final class PetsController: BaseController {
         let vc = AddPetController()
         navigationController?.pushViewController(vc, animated: true)
     }
+    
+    private func confirmDeletePet(_ pet: PetResponse) {
+        let alert = UIAlertController(
+            title: "Delete Pet",
+            message: "Are you sure you want to delete \(pet.name)?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            self?.deletePet(pet)
+        })
+        
+        present(alert, animated: true)
+    }
+
+    private func deletePet(_ pet: PetResponse) {
+        Task {
+            do {
+                try await PetsService.shared.deletePet(id: pet.id)
+                
+                DispatchQueue.main.async {
+                    self.viewModel.loadPets()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    let alert = UIAlertController(
+                        title: "Error",
+                        message: "Failed to delete pet",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
+    }
+    
+    
 }
 
 // MARK: - UITableViewDataSource
@@ -189,11 +228,32 @@ extension PetsController: UITableViewDataSource {
 extension PetsController: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        122
+        150
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        let pet = pets[indexPath.row]
+        let vc = AddPetController(mode: .edit(pet))
+        navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    func tableView(
+        _ tableView: UITableView,
+        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        
+        let pet = pets[indexPath.row]
+        
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+            self?.confirmDeletePet(pet)
+            completion(true)
+        }
+        
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
     }
 }
 

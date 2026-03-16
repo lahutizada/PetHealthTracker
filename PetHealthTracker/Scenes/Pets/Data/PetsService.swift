@@ -34,6 +34,25 @@ final class PetsService: PetsServicing {
         )
     }
     
+    func updatePet(id: String, requestModel: CreatePetRequest) async throws -> PetResponse {
+        let body = try JSONEncoder().encode(requestModel)
+        
+        return try await APIClient.shared.request(
+            endpoint: "/pets/\(id)",
+            method: "PATCH",
+            body: body,
+            requiresAuth: true
+        )
+    }
+    
+    func deletePet(id: String) async throws {
+        let _: DeletePetResponse = try await APIClient.shared.request(
+            endpoint: "/pets/\(id)",
+            method: "DELETE",
+            requiresAuth: true
+        )
+    }
+    
     func setHighlightedPet(id: String) async throws -> PetResponse {
         try await APIClient.shared.request(
             endpoint: "/pets/\(id)/highlight",

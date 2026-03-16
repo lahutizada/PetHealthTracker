@@ -14,4 +14,6 @@ struct CreatePetRequest: Codable {
     let neutered: Bool
     let breed: String?
     let dob: String?
+    let weight: Double?
 }
+
