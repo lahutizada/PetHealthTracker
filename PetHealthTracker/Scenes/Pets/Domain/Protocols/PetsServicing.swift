@@ -15,4 +15,5 @@ protocol PetsServicing {
     func deletePet(id: String) async throws
     func setHighlightedPet(id: String) async throws -> PetResponse
     func uploadPetPhoto(petId: String, image: UIImage) async throws -> PetResponse
+    func deletePetPhoto(id: String) async throws -> PetResponse
 }

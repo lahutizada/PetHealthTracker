@@ -81,11 +81,14 @@ final class PetDetailsController: BaseController {
     
     private lazy var petImageView: UIImageView = {
         let imageView = UIImageView()
+        imageView.image = UIImage(systemName: "pawprint.fill")
         imageView.tintColor = .mainBlue
         imageView.contentMode = .scaleAspectFit
+        imageView.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
         imageView.layer.cornerRadius = 62
         imageView.clipsToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 42, weight: .medium)
         return imageView
     }()
     
@@ -397,6 +400,8 @@ final class PetDetailsController: BaseController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
+        petImageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 42, weight: .medium)
+        
         contentView.addSubview(backButton)
         contentView.addSubview(screenTitleLabel)
         contentView.addSubview(editButton)
@@ -643,23 +648,22 @@ final class PetDetailsController: BaseController {
         
         if let photoUrl = pet.photoUrl,
            let url = URL(string: photoUrl) {
+            petImageView.cancelImageLoad()
+            petImageView.image = nil
             petImageView.setImage(from: url)
             petImageView.contentMode = .scaleAspectFill
             petImageView.clipsToBounds = true
             petImageView.tintColor = nil
+            petImageView.backgroundColor = .clear
             avatarContainer.backgroundColor = .white
         } else {
             petImageView.cancelImageLoad()
-            petImageView.contentMode = .scaleAspectFit
-            petImageView.clipsToBounds = false
+            petImageView.image = UIImage(systemName: "pawprint.fill")
             petImageView.tintColor = .mainBlue
-            avatarContainer.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
-            
-            if pet.species.uppercased() == "CAT" {
-                petImageView.image = UIImage(named: "cat.standard") ?? UIImage(systemName: "cat.fill")
-            } else {
-                petImageView.image = UIImage(named: "dog.standard") ?? UIImage(systemName: "dog.fill")
-            }
+            petImageView.contentMode = .scaleAspectFit
+            petImageView.clipsToBounds = true
+            petImageView.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
+            avatarContainer.backgroundColor = .white
         }
         
         weightCard.valueLabel.text = pet.weight != nil ? formattedWeight(pet.weight!) : "—"
@@ -722,9 +726,14 @@ final class PetDetailsController: BaseController {
         unitLabel.textAlignment = .center
         unitLabel.translatesAutoresizingMaskIntoConstraints = false
         
+        let valueStack = UIStackView(arrangedSubviews: [valueLabel, unitLabel])
+        valueStack.axis = .horizontal
+        valueStack.alignment = .lastBaseline
+        valueStack.spacing = 4
+        valueStack.translatesAutoresizingMaskIntoConstraints = false
+        
         container.addSubview(titleLabel)
-        container.addSubview(valueLabel)
-        container.addSubview(unitLabel)
+        container.addSubview(valueStack)
         
         NSLayoutConstraint.activate([
             container.heightAnchor.constraint(equalToConstant: 98),
@@ -732,11 +741,8 @@ final class PetDetailsController: BaseController {
             titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
             titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             
-            valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            valueLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            
-            unitLabel.leadingAnchor.constraint(equalTo: valueLabel.trailingAnchor, constant: 4),
-            unitLabel.bottomAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: -1)
+            valueStack.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            valueStack.centerXAnchor.constraint(equalTo: container.centerXAnchor)
         ])
         
         return (container, titleLabel, valueLabel, unitLabel)
@@ -832,34 +838,46 @@ final class PetDetailsController: BaseController {
     }
     
     private func makeAgeText(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else { return "Age unknown" }
+        guard let date = parseDate(dob) else { return "Age unknown" }
+        
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
         if let years = components.year, years > 0 {
             return years == 1 ? "1 Year" : "\(years) Years"
         }
+        
         if let months = components.month, months > 0 {
             return months == 1 ? "1 Month" : "\(months) Months"
         }
+        
         let weeks = max(1, components.weekOfMonth ?? 1)
         return weeks == 1 ? "1 Week" : "\(weeks) Weeks"
     }
     
     private func makeShortAgeValue(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else { return "—" }
+        guard let date = parseDate(dob) else { return "—" }
+        
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
         if let years = components.year, years > 0 { return "\(years)" }
         if let months = components.month, months > 0 { return "\(months)" }
+        
         return "\(max(1, components.weekOfMonth ?? 1))"
     }
     
     private func makeShortAgeUnit(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else { return "" }
+        guard let date = parseDate(dob) else { return "" }
+        
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
-        if let years = components.year, years > 0 { return years == 1 ? "yr" : "yrs" }
-        if let months = components.month, months > 0 { return months == 1 ? "mo" : "mos" }
+        if let years = components.year, years > 0 {
+            return years == 1 ? "yr" : "yrs"
+        }
+        
+        if let months = components.month, months > 0 {
+            return months == 1 ? "mo" : "mos"
+        }
+        
         let weeks = max(1, components.weekOfMonth ?? 1)
         return weeks == 1 ? "wk" : "wks"
     }
@@ -893,13 +911,39 @@ final class PetDetailsController: BaseController {
         }
     }
     
-    private func parseDate(_ value: String) -> Date? {
-        let iso = ISO8601DateFormatter()
-        if let date = iso.date(from: value) { return date }
+    private func parseDate(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
         
-        let fallback = DateFormatter()
-        fallback.dateFormat = "yyyy-MM-dd"
-        return fallback.date(from: value)
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let date = isoFormatter.date(from: value) {
+            return date
+        }
+        
+        let isoFormatterWithoutFraction = ISO8601DateFormatter()
+        isoFormatterWithoutFraction.formatOptions = [.withInternetDateTime]
+        
+        if let date = isoFormatterWithoutFraction.date(from: value) {
+            return date
+        }
+        
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let date = formatter.date(from: value) {
+            return date
+        }
+        
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        if let date = formatter.date(from: value) {
+            return date
+        }
+        
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        return formatter.date(from: value)
     }
     
     // MARK: - Actions

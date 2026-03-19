@@ -10,12 +10,13 @@ import UIKit
 final class HomeController: BaseController {
     
     private let viewModel: HomeViewModelProtocol
-
+    private var currentPet: PetResponse?
+    
     init(viewModel: HomeViewModelProtocol = DIContainer.shared.makeHomeViewModel()) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -48,61 +49,16 @@ final class HomeController: BaseController {
         label.text = "Here’s your pet care overview for today"
         label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textColor = .onboardingGray
+        label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    private lazy var petCardView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .white
-        view.layer.cornerRadius = 24
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.05
-        view.layer.shadowRadius = 16
-        view.layer.shadowOffset = CGSize(width: 0, height: 6)
+    private lazy var petCardView: PetCardContentView = {
+        let view = PetCardContentView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.isUserInteractionEnabled = true
         return view
-    }()
-    
-    private lazy var petImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.image = UIImage(named: "dogPlaceholder")
-        imageView.contentMode = .scaleAspectFill
-        imageView.layer.cornerRadius = 30
-        imageView.clipsToBounds = true
-        imageView.backgroundColor = .systemGray6
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        return imageView
-    }()
-    
-    private lazy var petNameLabel: UILabel = {
-        let label = UILabel()
-        label.text = "No pets yet"
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .onboardingBlack
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    private lazy var petInfoLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Add your first pet to get started"
-        label.font = .systemFont(ofSize: 15, weight: .medium)
-        label.textColor = .onboardingGray
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    private lazy var petStatusBadge: UILabel = {
-        let label = UILabel()
-        label.text = " Ready "
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .systemGreen
-        label.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.12)
-        label.layer.cornerRadius = 10
-        label.clipsToBounds = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
     }()
     
     private lazy var quickActionsTitle: UILabel = {
@@ -186,14 +142,29 @@ final class HomeController: BaseController {
     private lazy var mainPetTitleLabel = makeMetricTitle("Main Pet")
     private lazy var mainPetValueLabel = makeMetricValue("—")
     
+    private lazy var loadingView: UIActivityIndicatorView = {
+        let view = UIActivityIndicatorView(style: .medium)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.hidesWhenStopped = true
+        return view
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(reloadHomeFromNotification),
             name: .highlightedPetChanged,
             object: nil
         )
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(openPetDetails))
+        petCardView.addGestureRecognizer(tap)
+        
+        petCardView.onActionTapped = { [weak self] in
+            self?.openAddPet()
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -203,28 +174,20 @@ final class HomeController: BaseController {
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
-        title = ""
         
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
         contentView.addSubview(greetingLabel)
         contentView.addSubview(subtitleLabel)
-        
         contentView.addSubview(petCardView)
-        petCardView.addSubview(petImageView)
-        petCardView.addSubview(petNameLabel)
-        petCardView.addSubview(petInfoLabel)
-        petCardView.addSubview(petStatusBadge)
-        
         contentView.addSubview(quickActionsTitle)
         contentView.addSubview(actionsStackView)
-        
         contentView.addSubview(remindersTitle)
         contentView.addSubview(remindersStackView)
-        
         contentView.addSubview(summaryTitle)
         contentView.addSubview(summaryCardView)
+        contentView.addSubview(loadingView)
         
         let metric1 = makeMetricStack(title: petsTitleLabel, value: petsValueLabel)
         let metric2 = makeMetricStack(title: speciesTitleLabel, value: speciesValueLabel)
@@ -241,7 +204,10 @@ final class HomeController: BaseController {
             summaryStack.topAnchor.constraint(equalTo: summaryCardView.topAnchor, constant: 20),
             summaryStack.leadingAnchor.constraint(equalTo: summaryCardView.leadingAnchor, constant: 20),
             summaryStack.trailingAnchor.constraint(equalTo: summaryCardView.trailingAnchor, constant: -20),
-            summaryStack.bottomAnchor.constraint(equalTo: summaryCardView.bottomAnchor, constant: -20)
+            summaryStack.bottomAnchor.constraint(equalTo: summaryCardView.bottomAnchor, constant: -20),
+            
+            loadingView.centerXAnchor.constraint(equalTo: petCardView.centerXAnchor),
+            loadingView.centerYAnchor.constraint(equalTo: petCardView.centerYAnchor)
         ])
     }
     
@@ -269,23 +235,7 @@ final class HomeController: BaseController {
             petCardView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 20),
             petCardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             petCardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            
-            petImageView.topAnchor.constraint(equalTo: petCardView.topAnchor, constant: 20),
-            petImageView.leadingAnchor.constraint(equalTo: petCardView.leadingAnchor, constant: 20),
-            petImageView.widthAnchor.constraint(equalToConstant: 60),
-            petImageView.heightAnchor.constraint(equalToConstant: 60),
-            
-            petNameLabel.topAnchor.constraint(equalTo: petCardView.topAnchor, constant: 20),
-            petNameLabel.leadingAnchor.constraint(equalTo: petImageView.trailingAnchor, constant: 16),
-            petNameLabel.trailingAnchor.constraint(equalTo: petCardView.trailingAnchor, constant: -20),
-            
-            petInfoLabel.topAnchor.constraint(equalTo: petNameLabel.bottomAnchor, constant: 6),
-            petInfoLabel.leadingAnchor.constraint(equalTo: petNameLabel.leadingAnchor),
-            petInfoLabel.trailingAnchor.constraint(equalTo: petNameLabel.trailingAnchor),
-            
-            petStatusBadge.topAnchor.constraint(equalTo: petInfoLabel.bottomAnchor, constant: 10),
-            petStatusBadge.leadingAnchor.constraint(equalTo: petNameLabel.leadingAnchor),
-            petStatusBadge.bottomAnchor.constraint(equalTo: petCardView.bottomAnchor, constant: -20),
+            petCardView.heightAnchor.constraint(equalToConstant: 130),
             
             quickActionsTitle.topAnchor.constraint(equalTo: petCardView.bottomAnchor, constant: 28),
             quickActionsTitle.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
@@ -315,7 +265,10 @@ final class HomeController: BaseController {
     }
     
     override func configureViewModel() {
-        viewModel.onLoadingStateChanged = { _ in }
+        viewModel.onLoadingStateChanged = { [weak self] isLoading in
+            guard let self else { return }
+            isLoading ? self.loadingView.startAnimating() : self.loadingView.stopAnimating()
+        }
         
         viewModel.onHomeLoaded = { [weak self] viewData in
             self?.applyData(viewData)
@@ -327,21 +280,40 @@ final class HomeController: BaseController {
     }
     
     private func applyData(_ viewData: HomeViewData) {
+        currentPet = viewData.currentPet
+        
         greetingLabel.text = viewData.greetingText
-        petNameLabel.text = viewData.petName
-        petInfoLabel.text = viewData.petInfo
-        petStatusBadge.text = viewData.petStatusText
         petsValueLabel.text = viewData.petsCountText
         speciesValueLabel.text = viewData.speciesText
         mainPetValueLabel.text = viewData.mainPetText
         
-        if let photoURL = viewData.petPhotoURL,
-           let url = URL(string: photoURL) {
-            petImageView.contentMode = .scaleAspectFill
-            petImageView.setImage(from: url, placeholder: UIImage(named: "dogPlaceholder"))
+        if viewData.currentPet == nil {
+            petCardView.configure(
+                name: "No pets yet",
+                info: "Tap to add your first pet",
+                photoURL: nil,
+                species: "DOG",
+                statusText: "Get started",
+                isMain: false,
+                showChevron: true,
+                actionTitle: "Add"
+            )
+                        
         } else {
-            petImageView.cancelImageLoad()
-            petImageView.image = UIImage(named: "dogPlaceholder")
+            let species = viewData.currentPet?.species ?? "DOG"
+            
+            petCardView.configure(
+                name: viewData.petName,
+                info: viewData.petInfo,
+                photoURL: viewData.petPhotoURL,
+                species: species,
+                statusText: viewData.petStatusText,
+                isMain: false,
+                showChevron: true,
+                actionTitle: nil
+            )
+            
+            petCardView.alpha = 1.0
         }
     }
     
@@ -412,6 +384,9 @@ final class HomeController: BaseController {
     
     @objc private func addPetTapped() {
         let vc = AddPetController()
+        vc.onPetSaved = { [weak self] _ in
+            self?.viewModel.reloadHome()
+        }
         navigationController?.pushViewController(vc, animated: true)
     }
     
@@ -432,5 +407,22 @@ final class HomeController: BaseController {
     
     @objc private func reloadHomeFromNotification() {
         viewModel.reloadHome()
+    }
+    
+    @objc private func openPetDetails() {
+        if let pet = currentPet {
+            let vc = PetDetailsController(pet: pet)
+            navigationController?.pushViewController(vc, animated: true)
+        } else {
+            openAddPet()
+        }
+    }
+    
+    private func openAddPet() {
+        let vc = AddPetController()
+        vc.onPetSaved = { [weak self] _ in
+            self?.viewModel.reloadHome()
+        }
+        navigationController?.pushViewController(vc, animated: true)
     }
 }

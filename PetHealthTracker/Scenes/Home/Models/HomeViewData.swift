@@ -16,4 +16,5 @@ struct HomeViewData {
     let speciesText: String
     let mainPetText: String
     let petPhotoURL: String?
+    let currentPet: PetResponse?
 }

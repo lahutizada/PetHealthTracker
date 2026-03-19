@@ -49,6 +49,7 @@ final class AddPetController: BaseController {
     private var selectedGender: Gender = .male
     private var selectedBreed: String?
     private var selectedImage: UIImage?
+    private var shouldRemovePhoto = false
     
     private let dogBreeds = [
         "Golden Retriever", "Labrador", "German Shepherd", "Poodle",
@@ -509,6 +510,8 @@ final class AddPetController: BaseController {
     }
     
     private func applyModeIfNeeded() {
+        shouldRemovePhoto = false
+        
         switch mode {
         case .create:
             showPlaceholderIcon()
@@ -532,13 +535,9 @@ final class AddPetController: BaseController {
                 weightTextField.text = String(weight)
             }
             
-            if let dob = pet.dob {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                if let date = formatter.date(from: dob) {
-                    datePicker.date = date
-                    updateDateText()
-                }
+            if let date = parseDate(pet.dob) {
+                datePicker.date = date
+                updateDateText()
             }
             
             if let photoUrl = pet.photoUrl,
@@ -636,6 +635,8 @@ final class AddPetController: BaseController {
     }
     
     private func removePhoto() {
+        selectedImage = nil
+        shouldRemovePhoto = true
         showPlaceholderIcon()
     }
     
@@ -747,7 +748,8 @@ final class AddPetController: BaseController {
                 breed: selectedBreed ?? breedTextField.text,
                 dob: formattedISODate(),
                 weight: weight,
-                image: selectedImage
+                image: selectedImage,
+                removePhoto: shouldRemovePhoto
             )
         }
     }
@@ -777,6 +779,29 @@ final class AddPetController: BaseController {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: datePicker.date)
     }
+    
+    private func parseDate(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        
+        let isoFormatterWithFraction = ISO8601DateFormatter()
+        isoFormatterWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatterWithFraction.date(from: value) {
+            return date
+        }
+        
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: value) {
+            return date
+        }
+        
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        return formatter.date(from: value)
+    }
 }
 
 extension AddPetController: UIPickerViewDelegate, UIPickerViewDataSource {
@@ -803,6 +828,7 @@ extension AddPetController: PHPickerViewControllerDelegate {
             
             DispatchQueue.main.async {
                 self.selectedImage = image
+                self.shouldRemovePhoto = false
                 self.showPetImage(image)
             }
         }

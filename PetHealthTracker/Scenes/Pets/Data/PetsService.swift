@@ -118,4 +118,13 @@ final class PetsService: PetsServicing {
         
         return try JSONDecoder().decode(PetResponse.self, from: data)
     }
+    
+    func deletePetPhoto(id: String) async throws -> PetResponse {
+        try await APIClient.shared.request(
+            endpoint: "/pets/\(id)/photo",
+            method: "DELETE",
+            requiresAuth: true
+        )
+    }
+    
 }

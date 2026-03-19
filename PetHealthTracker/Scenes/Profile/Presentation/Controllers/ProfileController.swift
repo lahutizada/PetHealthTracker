@@ -5,6 +5,13 @@
 //  Created by Ruslan Lahutizada on 09.03.26.
 //
 
+//
+//  ProfileController.swift
+//  PetHealthTracker
+//
+//  Created by Ruslan Lahutizada on 09.03.26.
+//
+
 import UIKit
 import PhotosUI
 
@@ -14,48 +21,91 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     
     private let viewModel: ProfileViewModelProtocol
     private var currentUser: UserResponse?
-
+    
     init(viewModel: ProfileViewModelProtocol = DIContainer.shared.makeProfileViewModel()) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     // MARK: - UI
     
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
+    private lazy var scrollView: UIScrollView = {
+        let view = UIScrollView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.showsVerticalScrollIndicator = false
+        view.alwaysBounceVertical = true
+        return view
+    }()
+    
+    private lazy var contentView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Profile"
-        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
+    // MARK: Header Card
+    
+    private let headerCard: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 28
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.05
+        view.layer.shadowRadius = 14
+        view.layer.shadowOffset = CGSize(width: 0, height: 6)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private let avatarContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.10)
+        view.layer.cornerRadius = 56
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     private let avatarImageView: UIImageView = {
         let iv = UIImageView()
-        iv.image = UIImage(systemName: "person.crop.circle.fill")
-        iv.tintColor = .mainBlue
         iv.contentMode = .scaleAspectFill
-        iv.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
-        iv.layer.cornerRadius = 60
         iv.clipsToBounds = true
+        iv.isHidden = true
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
     
+    private let avatarLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 34, weight: .bold)
+        label.textColor = .mainBlue
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
     private let editAvatarButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "pencil"), for: .normal)
+        button.setImage(UIImage(systemName: "camera.fill"), for: .normal)
         button.tintColor = .white
         button.backgroundColor = .mainBlue
-        button.layer.cornerRadius = 16
+        button.layer.cornerRadius = 18
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.12
+        button.layer.shadowRadius = 8
+        button.layer.shadowOffset = CGSize(width: 0, height: 3)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -72,10 +122,10 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     
     private let emailLabel: UILabel = {
         let label = UILabel()
-        label.text = ""
         label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = .onboardingGray
         label.textAlignment = .center
+        label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -91,6 +141,19 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
+    
+    private let subtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Manage your account, preferences and support settings"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    // MARK: Sections
     
     private let preferencesTitle = ProfileSectionTitle(text: "PREFERENCES")
     private let preferencesCard = ProfileCardView()
@@ -111,17 +174,17 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         value: "kg, cm"
     )
     
-    private let supportTitle = ProfileSectionTitle(text: "SUPPORT")
+    private let supportTitle = ProfileSectionTitle(text: "ACCOUNT & SUPPORT")
     private let supportCard = ProfileCardView()
-    
-    private let helpCenterRow = ProfileChevronRow(
-        icon: "questionmark.circle",
-        title: "Help Center"
-    )
     
     private let accountRow = ProfileChevronRow(
         icon: "person.text.rectangle",
         title: "Edit Profile"
+    )
+    
+    private let helpCenterRow = ProfileChevronRow(
+        icon: "questionmark.circle",
+        title: "Help Center"
     )
     
     private let logoutButton: UIButton = {
@@ -131,6 +194,8 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         button.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         button.backgroundColor = .white
         button.layer.cornerRadius = 18
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.systemRed.withAlphaComponent(0.12).cgColor
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -138,7 +203,7 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     private let versionLabel: UILabel = {
         let label = UILabel()
         label.text = "Version 1.0.0"
-        label.font = .systemFont(ofSize: 13)
+        label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .systemGray
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -183,20 +248,21 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.showsVerticalScrollIndicator = false
-        
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
         contentView.addSubview(titleLabel)
-        contentView.addSubview(avatarImageView)
-        contentView.addSubview(editAvatarButton)
-        contentView.addSubview(nameLabel)
-        contentView.addSubview(emailLabel)
-        contentView.addSubview(accountBadge)
+        
+        contentView.addSubview(headerCard)
+        headerCard.addSubview(avatarContainer)
+        avatarContainer.addSubview(avatarImageView)
+        avatarContainer.addSubview(avatarLabel)
+        headerCard.addSubview(editAvatarButton)
+        headerCard.addSubview(nameLabel)
+        headerCard.addSubview(emailLabel)
+        headerCard.addSubview(accountBadge)
+        headerCard.addSubview(subtitleLabel)
+        headerCard.addSubview(loadingView)
         
         contentView.addSubview(preferencesTitle)
         contentView.addSubview(preferencesCard)
@@ -208,16 +274,15 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         contentView.addSubview(supportTitle)
         contentView.addSubview(supportCard)
         
-        supportCard.addArrangedSubview(helpCenterRow)
         supportCard.addArrangedSubview(accountRow)
+        supportCard.addArrangedSubview(helpCenterRow)
         
         contentView.addSubview(logoutButton)
         contentView.addSubview(versionLabel)
-        contentView.addSubview(loadingView)
         
-        avatarImageView.isUserInteractionEnabled = true
+        avatarContainer.isUserInteractionEnabled = true
         let tap = UITapGestureRecognizer(target: self, action: #selector(editAvatarTapped))
-        avatarImageView.addGestureRecognizer(tap)
+        avatarContainer.addGestureRecognizer(tap)
     }
     
     override func configureConstraints() {
@@ -234,30 +299,50 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
             contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
             
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             
-            avatarImageView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 28),
-            avatarImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            avatarImageView.widthAnchor.constraint(equalToConstant: 120),
-            avatarImageView.heightAnchor.constraint(equalToConstant: 120),
+            headerCard.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 20),
+            headerCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            headerCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             
-            editAvatarButton.trailingAnchor.constraint(equalTo: avatarImageView.trailingAnchor),
-            editAvatarButton.bottomAnchor.constraint(equalTo: avatarImageView.bottomAnchor),
-            editAvatarButton.widthAnchor.constraint(equalToConstant: 32),
-            editAvatarButton.heightAnchor.constraint(equalToConstant: 32),
+            avatarContainer.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 24),
+            avatarContainer.centerXAnchor.constraint(equalTo: headerCard.centerXAnchor),
+            avatarContainer.widthAnchor.constraint(equalToConstant: 112),
+            avatarContainer.heightAnchor.constraint(equalToConstant: 112),
             
-            nameLabel.topAnchor.constraint(equalTo: avatarImageView.bottomAnchor, constant: 16),
-            nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            avatarImageView.topAnchor.constraint(equalTo: avatarContainer.topAnchor),
+            avatarImageView.leadingAnchor.constraint(equalTo: avatarContainer.leadingAnchor),
+            avatarImageView.trailingAnchor.constraint(equalTo: avatarContainer.trailingAnchor),
+            avatarImageView.bottomAnchor.constraint(equalTo: avatarContainer.bottomAnchor),
+            
+            avatarLabel.centerXAnchor.constraint(equalTo: avatarContainer.centerXAnchor),
+            avatarLabel.centerYAnchor.constraint(equalTo: avatarContainer.centerYAnchor),
+            
+            editAvatarButton.trailingAnchor.constraint(equalTo: avatarContainer.trailingAnchor),
+            editAvatarButton.bottomAnchor.constraint(equalTo: avatarContainer.bottomAnchor),
+            editAvatarButton.widthAnchor.constraint(equalToConstant: 36),
+            editAvatarButton.heightAnchor.constraint(equalToConstant: 36),
+            
+            nameLabel.topAnchor.constraint(equalTo: avatarContainer.bottomAnchor, constant: 16),
+            nameLabel.leadingAnchor.constraint(equalTo: headerCard.leadingAnchor, constant: 20),
+            nameLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -20),
             
             emailLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 6),
-            emailLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
-            emailLabel.trailingAnchor.constraint(equalTo: nameLabel.trailingAnchor),
+            emailLabel.leadingAnchor.constraint(equalTo: headerCard.leadingAnchor, constant: 24),
+            emailLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -24),
             
             accountBadge.topAnchor.constraint(equalTo: emailLabel.bottomAnchor, constant: 10),
-            accountBadge.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            accountBadge.centerXAnchor.constraint(equalTo: headerCard.centerXAnchor),
             
-            preferencesTitle.topAnchor.constraint(equalTo: accountBadge.bottomAnchor, constant: 30),
+            subtitleLabel.topAnchor.constraint(equalTo: accountBadge.bottomAnchor, constant: 12),
+            subtitleLabel.leadingAnchor.constraint(equalTo: headerCard.leadingAnchor, constant: 24),
+            subtitleLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -24),
+            subtitleLabel.bottomAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: -24),
+            
+            loadingView.centerXAnchor.constraint(equalTo: avatarContainer.centerXAnchor),
+            loadingView.centerYAnchor.constraint(equalTo: avatarContainer.centerYAnchor),
+            
+            preferencesTitle.topAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: 28),
             preferencesTitle.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             
             preferencesCard.topAnchor.constraint(equalTo: preferencesTitle.bottomAnchor, constant: 10),
@@ -265,30 +350,29 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
             preferencesCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             
             supportTitle.topAnchor.constraint(equalTo: preferencesCard.bottomAnchor, constant: 24),
-            supportTitle.leadingAnchor.constraint(equalTo: preferencesTitle.leadingAnchor),
+            supportTitle.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             
             supportCard.topAnchor.constraint(equalTo: supportTitle.bottomAnchor, constant: 10),
-            supportCard.leadingAnchor.constraint(equalTo: preferencesCard.leadingAnchor),
-            supportCard.trailingAnchor.constraint(equalTo: preferencesCard.trailingAnchor),
+            supportCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            supportCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             
             logoutButton.topAnchor.constraint(equalTo: supportCard.bottomAnchor, constant: 30),
-            logoutButton.leadingAnchor.constraint(equalTo: preferencesCard.leadingAnchor),
-            logoutButton.trailingAnchor.constraint(equalTo: preferencesCard.trailingAnchor),
+            logoutButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            logoutButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             logoutButton.heightAnchor.constraint(equalToConstant: 56),
             
-            versionLabel.topAnchor.constraint(equalTo: logoutButton.bottomAnchor, constant: 12),
+            versionLabel.topAnchor.constraint(equalTo: logoutButton.bottomAnchor, constant: 14),
             versionLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            versionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -36),
-            
-            loadingView.centerXAnchor.constraint(equalTo: avatarImageView.centerXAnchor),
-            loadingView.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor)
+            versionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -36)
         ])
     }
     
     override func configureViewModel() {
         viewModel.onLoadingStateChanged = { [weak self] isLoading in
-            guard let self else { return }
-            isLoading ? self.loadingView.startAnimating() : self.loadingView.stopAnimating()
+            DispatchQueue.main.async {
+                self?.loadingView.isHidden = !isLoading
+                isLoading ? self?.loadingView.startAnimating() : self?.loadingView.stopAnimating()
+            }
         }
         
         viewModel.onProfileLoaded = { [weak self] user in
@@ -298,8 +382,22 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         
         viewModel.onAvatarUploaded = { [weak self] avatarUrl in
             guard let self, let url = URL(string: avatarUrl) else { return }
+            
+            self.avatarContainer.backgroundColor = .white
+            self.avatarImageView.isHidden = false
+            self.avatarLabel.isHidden = true
             self.avatarImageView.tintColor = nil
             self.avatarImageView.setImage(from: url)
+            
+            if let user = self.currentUser {
+                self.currentUser = UserResponse(
+                    sub: user.sub,
+                    email: user.email,
+                    name: user.name,
+                    avatarUrl: avatarUrl,
+                    highlightedPetId: user.highlightedPetId
+                )
+            }
         }
         
         viewModel.onLogoutSuccess = { [weak self] in
@@ -321,26 +419,40 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     
     private func applyProfile(_ user: UserResponse) {
         let cleanedName = user.name?.trimmingCharacters(in: .whitespacesAndNewlines)
-
+        
         if let cleanedName, !cleanedName.isEmpty {
             nameLabel.text = cleanedName
         } else {
             let fallbackName = user.email.components(separatedBy: "@").first ?? "User"
             nameLabel.text = fallbackName.capitalized
         }
-
+        
         emailLabel.text = user.email
-
+        
         if let avatarUrl = user.avatarUrl,
            let url = URL(string: avatarUrl) {
+            avatarContainer.backgroundColor = .white
+            avatarImageView.isHidden = false
+            avatarLabel.isHidden = true
             avatarImageView.tintColor = nil
             avatarImageView.contentMode = .scaleAspectFill
             avatarImageView.setImage(from: url)
         } else {
             avatarImageView.cancelImageLoad()
-            avatarImageView.image = UIImage(systemName: "person.crop.circle.fill")
-            avatarImageView.tintColor = .mainBlue
+            avatarContainer.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.10)
+            avatarImageView.isHidden = true
+            avatarLabel.isHidden = false
+            avatarLabel.text = initials(from: user.name ?? user.email)
         }
+    }
+    
+    private func initials(from name: String) -> String {
+        let parts = name
+            .split(separator: " ")
+            .prefix(2)
+            .map { String($0.prefix(1)).uppercased() }
+        
+        return parts.isEmpty ? "U" : parts.joined()
     }
     
     // MARK: - Avatar
@@ -365,8 +477,11 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
             guard let self, let image = image as? UIImage else { return }
             
             DispatchQueue.main.async {
+                self.avatarContainer.backgroundColor = .white
                 self.avatarImageView.image = image
                 self.avatarImageView.tintColor = nil
+                self.avatarImageView.isHidden = false
+                self.avatarLabel.isHidden = true
             }
             
             self.viewModel.uploadAvatar(image)

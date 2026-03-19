@@ -5,6 +5,13 @@
 //  Created by Ruslan Lahutizada on 16.03.26.
 //
 
+//
+//  AddPetViewModel.swift
+//  PetHealthTracker
+//
+//  Created by Ruslan Lahutizada on 16.03.26.
+//
+
 import UIKit
 
 protocol AddPetViewModelProtocol: AnyObject {
@@ -32,7 +39,8 @@ protocol AddPetViewModelProtocol: AnyObject {
         breed: String?,
         dob: String?,
         weight: Double?,
-        image: UIImage?
+        image: UIImage?,
+        removePhoto: Bool
     )
     
     func clearError()
@@ -78,7 +86,8 @@ final class AddPetViewModel: AddPetViewModelProtocol {
             breed: breed,
             dob: dob,
             weight: weight,
-            image: image
+            image: image,
+            removePhoto: false
         )
     }
     
@@ -91,10 +100,11 @@ final class AddPetViewModel: AddPetViewModelProtocol {
         breed: String?,
         dob: String?,
         weight: Double?,
-        image: UIImage?
+        image: UIImage?,
+        removePhoto: Bool
     ) {
         savePet(
-            mode: .editPlaceholder,
+            mode: .edit,
             petId: id,
             species: species,
             name: name,
@@ -103,7 +113,8 @@ final class AddPetViewModel: AddPetViewModelProtocol {
             breed: breed,
             dob: dob,
             weight: weight,
-            image: image
+            image: image,
+            removePhoto: removePhoto
         )
     }
     
@@ -123,7 +134,8 @@ final class AddPetViewModel: AddPetViewModelProtocol {
         breed: String?,
         dob: String?,
         weight: Double?,
-        image: UIImage?
+        image: UIImage?,
+        removePhoto: Bool
     ) {
         clearError()
         
@@ -173,7 +185,7 @@ final class AddPetViewModel: AddPetViewModelProtocol {
                 case .create:
                     savedPet = try await createPetUseCase.execute(requestModel: request)
                     
-                case .editPlaceholder:
+                case .edit:
                     guard let petId else {
                         throw NSError(
                             domain: "AddPetViewModel",
@@ -191,6 +203,8 @@ final class AddPetViewModel: AddPetViewModelProtocol {
                         petId: savedPet.id,
                         image: image
                     )
+                } else if removePhoto {
+                    finalPet = try await petsService.deletePetPhoto(id: savedPet.id)
                 } else {
                     finalPet = savedPet
                 }
@@ -212,6 +226,6 @@ final class AddPetViewModel: AddPetViewModelProtocol {
 private extension AddPetViewModel {
     enum SaveMode {
         case create
-        case editPlaceholder
+        case edit
     }
 }

@@ -12,13 +12,13 @@ protocol GetPetsUseCaseProtocol {
 }
 
 final class GetPetsUseCase: GetPetsUseCaseProtocol {
-
+    
     private let petsService: PetsServicing
-
+    
     init(petsService: PetsServicing = PetsService.shared) {
         self.petsService = petsService
     }
-
+    
     func execute() async throws -> [PetResponse] {
         try await petsService.getPets()
     }

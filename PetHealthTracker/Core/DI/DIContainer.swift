@@ -138,6 +138,13 @@ final class DIContainer {
             getPetDetailsUseCase: GetPetDetailsUseCase(),
             setHighlightedPetUseCase: SetHighlightedPetUseCase()
         )
-
+    }
+    
+    func makeRemindersViewModel() -> RemindersViewModelProtocol {
+        RemindersViewModel()
+    }
+    
+    func makeAddReminderViewModel() -> AddReminderViewModelProtocol {
+        AddReminderViewModel()
     }
 }

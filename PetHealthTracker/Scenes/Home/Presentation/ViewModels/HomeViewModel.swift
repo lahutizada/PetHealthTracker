@@ -73,23 +73,29 @@ final class HomeViewModel: HomeViewModelProtocol {
                 greetingText: "Hello, \(displayName) 👋",
                 petName: "No pets yet",
                 petInfo: "Add your first pet to get started",
-                petStatusText: " Ready ",
+                petStatusText: "Ready",
                 petsCountText: "0",
                 speciesText: "—",
                 mainPetText: "—",
-                petPhotoURL: nil
+                petPhotoURL: nil,
+                currentPet: nil
             )
         }
+        
+        let speciesText = pet.species.uppercased() == "CAT" ? "Cat" : "Dog"
+        let breedText = pet.breed ?? "Unknown breed"
+        let statusText = pet.weight == nil ? "Check weight" : "Up to date"
         
         return HomeViewData(
             greetingText: "Hello, \(displayName) 👋",
             petName: pet.name,
-            petInfo: "\(pet.species.capitalized) • \(pet.breed ?? "Unknown breed")",
-            petStatusText: " Active ",
+            petInfo: "\(speciesText) • \(breedText)",
+            petStatusText: statusText,
             petsCountText: "\(pets.count)",
-            speciesText: pet.species.capitalized,
+            speciesText: speciesText,
             mainPetText: pet.name,
-            petPhotoURL: pet.photoUrl
+            petPhotoURL: pet.photoUrl,
+            currentPet: pet
         )
     }
 }
