@@ -128,14 +128,7 @@ final class ForgotPasswordController: BaseController {
         return textField
     }()
     
-    private lazy var statusLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.numberOfLines = 0
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+    private lazy var statusView = StatusMessageView()
     
     private lazy var sendLinkButton: UIButton = {
         let button = UIButton(type: .system)
@@ -200,7 +193,7 @@ final class ForgotPasswordController: BaseController {
         bottomContainer.addSubview(subtitleLabel)
         bottomContainer.addSubview(emailLabel)
         bottomContainer.addSubview(emailTextField)
-        bottomContainer.addSubview(statusLabel)
+        bottomContainer.addSubview(statusView)
         bottomContainer.addSubview(sendLinkButton)
         bottomContainer.addSubview(backToLoginPromptLabel)
         bottomContainer.addSubview(backToLoginButton)
@@ -255,11 +248,11 @@ final class ForgotPasswordController: BaseController {
             emailTextField.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             emailTextField.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             
-            statusLabel.topAnchor.constraint(equalTo: emailTextField.bottomAnchor, constant: 12),
-            statusLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            statusLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
-            
-            sendLinkButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 12),
+            statusView.topAnchor.constraint(equalTo: emailTextField.bottomAnchor, constant: 12),
+            statusView.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            statusView.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+
+            sendLinkButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 12),
             sendLinkButton.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             sendLinkButton.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             
@@ -278,12 +271,9 @@ final class ForgotPasswordController: BaseController {
             guard let self else { return }
             
             if let message, !message.isEmpty {
-                self.statusLabel.text = message
-                self.statusLabel.textColor = .systemRed
-                self.statusLabel.isHidden = false
-            } else if self.statusLabel.textColor == .systemRed {
-                self.statusLabel.text = nil
-                self.statusLabel.isHidden = true
+                self.statusView.show(message: message, style: .error)
+            } else {
+                self.statusView.hide()
             }
         }
         
@@ -291,12 +281,9 @@ final class ForgotPasswordController: BaseController {
             guard let self else { return }
             
             if let message, !message.isEmpty {
-                self.statusLabel.text = message
-                self.statusLabel.textColor = .systemGreen
-                self.statusLabel.isHidden = false
-            } else if self.statusLabel.textColor == .systemGreen {
-                self.statusLabel.text = nil
-                self.statusLabel.isHidden = true
+                self.statusView.show(message: message, style: .success)
+            } else {
+                self.statusView.hide()
             }
         }
         
@@ -319,6 +306,7 @@ final class ForgotPasswordController: BaseController {
     
     @objc private func clearStatus() {
         viewModel.clearMessages()
+        statusView.hide()
     }
 }
 

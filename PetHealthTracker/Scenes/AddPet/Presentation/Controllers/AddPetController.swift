@@ -259,15 +259,7 @@ final class AddPetController: BaseController {
         return sw
     }()
     
-    private lazy var errorLabel: UILabel = {
-        let label = UILabel()
-        label.textColor = .systemRed
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.numberOfLines = 0
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+    private lazy var statusView = StatusMessageView()
     
     private lazy var saveButton: UIButton = {
         let button = UIButton(type: .system)
@@ -312,7 +304,7 @@ final class AddPetController: BaseController {
             breedLabel, breedTextField, breedChevron,
             birthDateLabel, birthDateTextField, birthDateIcon,
             weightLabel, weightTextField,
-            neuteredCard, errorLabel, saveButton
+            neuteredCard, statusView, saveButton
         ].forEach { contentView.addSubview($0) }
         
         photoContainer.addSubview(petImageView)
@@ -445,11 +437,11 @@ final class AddPetController: BaseController {
             neuteredSwitch.centerYAnchor.constraint(equalTo: neuteredCard.centerYAnchor),
             neuteredSwitch.trailingAnchor.constraint(equalTo: neuteredCard.trailingAnchor, constant: -16),
             
-            errorLabel.topAnchor.constraint(equalTo: neuteredCard.bottomAnchor, constant: 12),
-            errorLabel.leadingAnchor.constraint(equalTo: petTypeLabel.leadingAnchor),
-            errorLabel.trailingAnchor.constraint(equalTo: petTypeLabel.trailingAnchor),
-            
-            saveButton.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 16),
+            statusView.topAnchor.constraint(equalTo: neuteredCard.bottomAnchor, constant: 12),
+            statusView.leadingAnchor.constraint(equalTo: petTypeLabel.leadingAnchor),
+            statusView.trailingAnchor.constraint(equalTo: petTypeLabel.trailingAnchor),
+
+            saveButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 16),
             saveButton.leadingAnchor.constraint(equalTo: petTypeLabel.leadingAnchor),
             saveButton.trailingAnchor.constraint(equalTo: petTypeLabel.trailingAnchor),
             saveButton.heightAnchor.constraint(equalToConstant: 58),
@@ -466,12 +458,17 @@ final class AddPetController: BaseController {
         
         viewModel.onError = { [weak self] message in
             guard let self else { return }
-            self.errorLabel.text = message
-            self.errorLabel.isHidden = (message == nil || message?.isEmpty == true)
+            
+            if let message, !message.isEmpty {
+                self.statusView.show(message: message, style: .error)
+            } else {
+                self.statusView.hide()
+            }
         }
         
         viewModel.onPetCreated = { [weak self] pet in
             guard let self else { return }
+            self.statusView.hide()
             self.onPetSaved?(pet)
             self.navigationController?.popViewController(animated: true)
         }
@@ -757,6 +754,7 @@ final class AddPetController: BaseController {
     
     @objc private func clearError() {
         viewModel.clearError()
+        statusView.hide()
     }
     
     @objc private func keyboardWillShow(_ notification: Notification) {

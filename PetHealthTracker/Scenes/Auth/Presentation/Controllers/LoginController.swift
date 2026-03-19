@@ -171,16 +171,7 @@ final class LoginController: BaseController {
         return button
     }()
 
-    private lazy var errorLabel: UILabel = {
-        let label = UILabel()
-        label.textColor = .systemRed
-        label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.numberOfLines = 1
-        label.textAlignment = .left
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+    private lazy var statusView = StatusMessageView()
 
     private lazy var loginButton: UIButton = {
         let button = UIButton(type: .system)
@@ -291,7 +282,7 @@ final class LoginController: BaseController {
     // MARK: - Actions
 
     @objc private func handleGoogleLogin() {
-        showError("Google Sign-In coming soon.")
+        statusView.show(message: "Google Sign-In coming soon.", style: .info)
     }
 
     @objc private func openRegister() {
@@ -311,6 +302,7 @@ final class LoginController: BaseController {
 
     @objc private func clearError() {
         viewModel.clearError()
+        statusView.hide()
     }
 
     @objc private func togglePasswordVisibility() {
@@ -333,8 +325,7 @@ final class LoginController: BaseController {
     // MARK: - Helpers
 
     private func showError(_ message: String) {
-        errorLabel.text = message
-        errorLabel.isHidden = false
+        statusView.show(message: message, style: .error)
     }
 
     // MARK: - BaseController
@@ -358,7 +349,7 @@ final class LoginController: BaseController {
         passwordContainer.addSubview(passwordTextField)
         passwordContainer.addSubview(showPasswordButton)
         bottomContainer.addSubview(forgotPasswordButton)
-        bottomContainer.addSubview(errorLabel)
+        bottomContainer.addSubview(statusView)
         bottomContainer.addSubview(loginButton)
         bottomContainer.addSubview(leftDivider)
         bottomContainer.addSubview(orLabel)
@@ -428,11 +419,11 @@ final class LoginController: BaseController {
             forgotPasswordButton.topAnchor.constraint(equalTo: passwordContainer.bottomAnchor, constant: 10),
             forgotPasswordButton.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
 
-            errorLabel.centerYAnchor.constraint(equalTo: forgotPasswordButton.centerYAnchor),
-            errorLabel.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
-            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: forgotPasswordButton.leadingAnchor, constant: -12),
+            statusView.topAnchor.constraint(equalTo: forgotPasswordButton.bottomAnchor, constant: 8),
+            statusView.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            statusView.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
 
-            loginButton.topAnchor.constraint(equalTo: forgotPasswordButton.bottomAnchor, constant: 14),
+            loginButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 14),
             loginButton.leadingAnchor.constraint(equalTo: emailTextField.leadingAnchor),
             loginButton.trailingAnchor.constraint(equalTo: emailTextField.trailingAnchor),
 
@@ -472,11 +463,9 @@ final class LoginController: BaseController {
             guard let self else { return }
 
             if let message, !message.isEmpty {
-                self.errorLabel.text = message
-                self.errorLabel.isHidden = false
+                self.statusView.show(message: message, style: .error)
             } else {
-                self.errorLabel.text = nil
-                self.errorLabel.isHidden = true
+                self.statusView.hide()
             }
         }
 
@@ -581,7 +570,7 @@ extension LoginController: ASAuthorizationControllerDelegate, ASAuthorizationCon
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
     ) {
-        showError("Apple Sign-In coming soon.")
+        statusView.show(message: "Apple Sign-In coming soon.", style: .info)
     }
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {

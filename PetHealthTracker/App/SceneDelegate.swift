@@ -19,21 +19,27 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         let window = UIWindow(windowScene: windowScene)
-        self.window = window
-        
-//        OnboardingManager.shared.reset()
-        
-        let coordinator = AppCoordinator(window: window)
-        self.appCoordinator = coordinator
-        coordinator.start()
-    }
-    
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        guard let url = URLContexts.first?.url else { return }
-        handleIncomingURL(url)
-    }
-    
+                self.window = window
+                
+                let coordinator = AppCoordinator(window: window)
+                self.appCoordinator = coordinator
+                coordinator.start()
+                
+                if let url = connectionOptions.urlContexts.first?.url {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.handleIncomingURL(url)
+                    }
+                }
+            }
+            
+            func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+                guard let url = URLContexts.first?.url else { return }
+                handleIncomingURL(url)
+            }
+            
     private func handleIncomingURL(_ url: URL) {
+        print("Incoming URL:", url.absoluteString)
+        
         guard url.scheme == "pethealthtracker" else { return }
         guard url.host == "reset-password" else { return }
         
@@ -42,11 +48,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             let token = components.queryItems?.first(where: { $0.name == "token" })?.value
         else { return }
         
-        let resetVC = ResetPasswordController(token: token)
-        
-        if let nav = window?.rootViewController as? UINavigationController {
-            nav.pushViewController(resetVC, animated: true)
-        }
+        appCoordinator?.showResetPassword(token: token)
     }
     
     func sceneDidDisconnect(_ scene: UIScene) {
