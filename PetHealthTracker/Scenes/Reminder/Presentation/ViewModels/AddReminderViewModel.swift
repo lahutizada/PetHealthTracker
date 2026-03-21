@@ -15,7 +15,7 @@ struct ReminderPetItem {
 protocol AddReminderViewModelProtocol: AnyObject {
     var onLoadingStateChanged: ((Bool) -> Void)? { get set }
     var onPetsLoaded: (([ReminderPetItem]) -> Void)? { get set }
-    var onReminderCreated: ((ReminderResponse) -> Void)? { get set }
+    var onReminderSaved: ((ReminderResponse) -> Void)? { get set }
     var onError: ((String?) -> Void)? { get set }
     
     func loadPets()
@@ -27,6 +27,15 @@ protocol AddReminderViewModelProtocol: AnyObject {
         selectedPetIndex: Int
     )
     
+    func updateReminder(
+        id: String,
+        title: String?,
+        notes: String?,
+        dueDate: Date,
+        category: String,
+        selectedPetIndex: Int
+    )
+    
     func clearError()
 }
 
@@ -34,20 +43,23 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
     
     var onLoadingStateChanged: ((Bool) -> Void)?
     var onPetsLoaded: (([ReminderPetItem]) -> Void)?
-    var onReminderCreated: ((ReminderResponse) -> Void)?
+    var onReminderSaved: ((ReminderResponse) -> Void)?
     var onError: ((String?) -> Void)?
     
     private let getPetsUseCase: GetPetsUseCaseProtocol
     private let createReminderUseCase: CreateReminderUseCaseProtocol
+    private let updateReminderUseCase: UpdateReminderUseCaseProtocol
     
     private var petItems: [ReminderPetItem] = []
     
     init(
         getPetsUseCase: GetPetsUseCaseProtocol = GetPetsUseCase(),
-        createReminderUseCase: CreateReminderUseCaseProtocol = CreateReminderUseCase()
+        createReminderUseCase: CreateReminderUseCaseProtocol = CreateReminderUseCase(),
+        updateReminderUseCase: UpdateReminderUseCaseProtocol = UpdateReminderUseCase()
     ) {
         self.getPetsUseCase = getPetsUseCase
         self.createReminderUseCase = createReminderUseCase
+        self.updateReminderUseCase = updateReminderUseCase
     }
     
     func loadPets() {
@@ -125,12 +137,64 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
                 
                 await MainActor.run {
                     self.onLoadingStateChanged?(false)
-                    self.onReminderCreated?(reminder)
+                    self.onReminderSaved?(reminder)
                 }
             } catch {
                 await MainActor.run {
                     self.onLoadingStateChanged?(false)
                     self.onError?("Failed to save reminder")
+                }
+            }
+        }
+    }
+    
+    func updateReminder(
+        id: String,
+        title: String?,
+        notes: String?,
+        dueDate: Date,
+        category: String,
+        selectedPetIndex: Int
+    ) {
+        guard petItems.indices.contains(selectedPetIndex) else {
+            onError?("Please select a pet")
+            return
+        }
+        
+        let cleanTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let cleanNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !cleanTitle.isEmpty else {
+            onError?("Reminder title is required")
+            return
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        
+        let request = UpdateReminderRequest(
+            title: cleanTitle,
+            notes: cleanNotes?.isEmpty == true ? nil : cleanNotes,
+            dueDate: formatter.string(from: dueDate),
+            type: category.lowercased(),
+            completed: nil,
+            petId: petItems[selectedPetIndex].id
+        )
+        
+        onLoadingStateChanged?(true)
+        
+        Task {
+            do {
+                let reminder = try await updateReminderUseCase.execute(id: id, requestModel: request)
+                
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onReminderSaved?(reminder)
+                }
+            } catch {
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onError?("Failed to update reminder")
                 }
             }
         }

@@ -152,12 +152,18 @@ final class MainTabBarController: UITabBarController {
         
         sheet.addAction(UIAlertAction(title: "Add Pet", style: .default, handler: { _ in
             let vc = AddPetController()
-            self.present(UINavigationController(rootViewController: vc), animated: true)
+            let nav = UINavigationController(rootViewController: vc)
+            nav.modalPresentationStyle = .fullScreen
+            nav.setNavigationBarHidden(true, animated: false)
+            self.present(nav, animated: true)
         }))
         
         sheet.addAction(UIAlertAction(title: "Add Reminder", style: .default, handler: { _ in
             let vc = AddReminderController()
-            self.present(UINavigationController(rootViewController: vc), animated: true)
+            let nav = UINavigationController(rootViewController: vc)
+            nav.modalPresentationStyle = .fullScreen
+            nav.setNavigationBarHidden(true, animated: false)
+            self.present(nav, animated: true)
         }))
         
         sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))

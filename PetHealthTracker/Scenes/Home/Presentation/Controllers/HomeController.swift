@@ -73,7 +73,7 @@ final class HomeController: BaseController {
     private lazy var actionsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
             makeActionButton(title: "Add Pet", icon: "pawprint.fill", action: #selector(addPetTapped)),
-            makeActionButton(title: "Reminder", icon: "bell.fill", action: #selector(addReminderTapped)),
+            makeActionButton(title: "Reminders", icon: "bell.fill", action: #selector(addReminderTapped)),
             makeActionButton(title: "Health Log", icon: "heart.text.square.fill", action: #selector(addHealthLogTapped))
         ])
         stack.axis = .horizontal
@@ -391,7 +391,7 @@ final class HomeController: BaseController {
     }
     
     @objc private func addReminderTapped() {
-        let vc = AddReminderController()
+        let vc = RemindersController()
         navigationController?.pushViewController(vc, animated: true)
     }
     

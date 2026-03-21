@@ -15,7 +15,8 @@ final class RemindersService: RemindersServicing {
     func getReminders() async throws -> [ReminderResponse] {
         try await APIClient.shared.request(
             endpoint: "/reminders",
-            method: "GET"
+            method: "GET",
+            requiresAuth: true
         )
     }
     
@@ -25,7 +26,8 @@ final class RemindersService: RemindersServicing {
         return try await APIClient.shared.request(
             endpoint: "/reminders",
             method: "POST",
-            body: body
+            body: body,
+            requiresAuth: true
         )
     }
     
@@ -35,15 +37,16 @@ final class RemindersService: RemindersServicing {
         return try await APIClient.shared.request(
             endpoint: "/reminders/\(id)",
             method: "PATCH",
-            body: body
+            body: body,
+            requiresAuth: true
         )
     }
     
     func deleteReminder(id: String) async throws {
-        struct EmptyResponse: Decodable {}
-        _ = try await APIClient.shared.request(
+        let _: EmptyResponse = try await APIClient.shared.request(
             endpoint: "/reminders/\(id)",
-            method: "DELETE"
-        ) as EmptyResponse
+            method: "DELETE",
+            requiresAuth: true
+        )
     }
 }

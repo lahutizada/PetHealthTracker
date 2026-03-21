@@ -12,12 +12,12 @@ final class ReminderFocusCardView: UIView {
     private let containerView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
-        view.layer.cornerRadius = 28
+        view.layer.cornerRadius = 30
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
-    let captionLabel: UILabel = {
+    private let eyebrowLabel: UILabel = {
         let label = UILabel()
         label.text = "TODAY'S FOCUS"
         label.font = .systemFont(ofSize: 14, weight: .bold)
@@ -26,8 +26,9 @@ final class ReminderFocusCardView: UIView {
         return label
     }()
     
-    let countLabel: UILabel = {
+    private let titleLabel: UILabel = {
         let label = UILabel()
+        label.text = "0 Tasks\nPending"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.numberOfLines = 2
@@ -35,28 +36,48 @@ final class ReminderFocusCardView: UIView {
         return label
     }()
     
-    let petsLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .medium)
-        label.textColor = .onboardingGray
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    private let bellWrapView: UIView = {
+    private let bellWrap: UIView = {
         let view = UIView()
         view.backgroundColor = .white
-        view.layer.cornerRadius = 24
+        view.layer.cornerRadius = 34
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.04
+        view.layer.shadowRadius = 10
+        view.layer.shadowOffset = CGSize(width: 0, height: 4)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
-    private let bellIconView: UIImageView = {
+    private let bellIcon: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "bell.fill"))
         imageView.tintColor = .mainBlue
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
+    
+    private let firstPetImageView = ReminderFocusCardView.makePetImageView()
+    private let secondPetImageView = ReminderFocusCardView.makePetImageView()
+    
+    private let petsTextLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private static func makePetImageView() -> UIImageView {
+        let imageView = UIImageView()
+        imageView.backgroundColor = .white
+        imageView.contentMode = .scaleAspectFill
+        imageView.layer.cornerRadius = 20
+        imageView.clipsToBounds = true
+        imageView.layer.borderWidth = 2
+        imageView.layer.borderColor = UIColor.white.cgColor
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isHidden = true
+        return imageView
+    }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -69,12 +90,17 @@ final class ReminderFocusCardView: UIView {
     }
     
     private func setupUI() {
+        backgroundColor = .clear
         addSubview(containerView)
-        containerView.addSubview(captionLabel)
-        containerView.addSubview(countLabel)
-        containerView.addSubview(petsLabel)
-        containerView.addSubview(bellWrapView)
-        bellWrapView.addSubview(bellIconView)
+        
+        containerView.addSubview(eyebrowLabel)
+        containerView.addSubview(titleLabel)
+        containerView.addSubview(bellWrap)
+        bellWrap.addSubview(bellIcon)
+        
+        containerView.addSubview(firstPetImageView)
+        containerView.addSubview(secondPetImageView)
+        containerView.addSubview(petsTextLabel)
     }
     
     private func setupConstraints() {
@@ -83,32 +109,67 @@ final class ReminderFocusCardView: UIView {
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            containerView.heightAnchor.constraint(equalToConstant: 150),
+            containerView.heightAnchor.constraint(equalToConstant: 190),
             
-            captionLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 22),
-            captionLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
+            eyebrowLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 28),
+            eyebrowLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 28),
             
-            countLabel.topAnchor.constraint(equalTo: captionLabel.bottomAnchor, constant: 10),
-            countLabel.leadingAnchor.constraint(equalTo: captionLabel.leadingAnchor),
-            countLabel.trailingAnchor.constraint(equalTo: bellWrapView.leadingAnchor, constant: -12),
+            titleLabel.topAnchor.constraint(equalTo: eyebrowLabel.bottomAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: eyebrowLabel.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -120),
             
-            petsLabel.leadingAnchor.constraint(equalTo: captionLabel.leadingAnchor),
-            petsLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -22),
+            bellWrap.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 18),
+            bellWrap.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            bellWrap.widthAnchor.constraint(equalToConstant: 68),
+            bellWrap.heightAnchor.constraint(equalToConstant: 68),
             
-            bellWrapView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 18),
-            bellWrapView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
-            bellWrapView.widthAnchor.constraint(equalToConstant: 48),
-            bellWrapView.heightAnchor.constraint(equalToConstant: 48),
+            bellIcon.centerXAnchor.constraint(equalTo: bellWrap.centerXAnchor),
+            bellIcon.centerYAnchor.constraint(equalTo: bellWrap.centerYAnchor),
+            bellIcon.widthAnchor.constraint(equalToConstant: 24),
+            bellIcon.heightAnchor.constraint(equalToConstant: 24),
             
-            bellIconView.centerXAnchor.constraint(equalTo: bellWrapView.centerXAnchor),
-            bellIconView.centerYAnchor.constraint(equalTo: bellWrapView.centerYAnchor),
-            bellIconView.widthAnchor.constraint(equalToConstant: 20),
-            bellIconView.heightAnchor.constraint(equalToConstant: 20)
+            firstPetImageView.leadingAnchor.constraint(equalTo: eyebrowLabel.leadingAnchor),
+            firstPetImageView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -26),
+            firstPetImageView.widthAnchor.constraint(equalToConstant: 40),
+            firstPetImageView.heightAnchor.constraint(equalToConstant: 40),
+            
+            secondPetImageView.leadingAnchor.constraint(equalTo: firstPetImageView.trailingAnchor, constant: -10),
+            secondPetImageView.centerYAnchor.constraint(equalTo: firstPetImageView.centerYAnchor),
+            secondPetImageView.widthAnchor.constraint(equalToConstant: 40),
+            secondPetImageView.heightAnchor.constraint(equalToConstant: 40),
+            
+            petsTextLabel.centerYAnchor.constraint(equalTo: firstPetImageView.centerYAnchor),
+            petsTextLabel.leadingAnchor.constraint(equalTo: secondPetImageView.trailingAnchor, constant: 14),
+            petsTextLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -28)
         ])
     }
     
-    func configure(taskCount: Int, petsText: String) {
-        countLabel.text = "\(taskCount) Tasks\nPending"
-        petsLabel.text = petsText
+    func configure(taskCount: Int, petsText: String, pets: [ReminderFocusPet]) {
+        titleLabel.text = "\(taskCount) Tasks\nPending"
+        petsTextLabel.text = petsText
+        
+        configurePetImageView(firstPetImageView, with: pets.first)
+        configurePetImageView(secondPetImageView, with: pets.count > 1 ? pets[1] : nil)
+    }
+    
+    private func configurePetImageView(_ imageView: UIImageView, with pet: ReminderFocusPet?) {
+        guard let pet else {
+            imageView.isHidden = true
+            imageView.cancelImageLoad()
+            imageView.image = nil
+            return
+        }
+        
+        imageView.isHidden = false
+        
+        if let photoURL = pet.photoURL, let url = URL(string: photoURL) {
+            imageView.setImage(from: url)
+        } else {
+            imageView.cancelImageLoad()
+            imageView.image = UIImage(systemName: "pawprint.fill")
+            imageView.tintColor = .mainBlue
+            imageView.contentMode = .scaleAspectFit
+            imageView.backgroundColor = .white
+        }
     }
 }

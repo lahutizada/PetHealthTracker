@@ -9,11 +9,20 @@ import UIKit
 
 final class AddReminderController: BaseController {
     
-    var onReminderSaved: (() -> Void)?
+    enum Mode {
+        case create
+        case edit(ReminderResponse)
+    }
     
+    var onReminderSaved: (() -> Void)?
+    private let mode: Mode
     private let viewModel: AddReminderViewModelProtocol
     
-    init(viewModel: AddReminderViewModelProtocol = DIContainer.shared.makeAddReminderViewModel()) {
+    init(
+        mode: Mode = .create,
+        viewModel: AddReminderViewModelProtocol = DIContainer.shared.makeAddReminderViewModel()
+    ) {
+        self.mode = mode
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -204,11 +213,13 @@ final class AddReminderController: BaseController {
         updateDateText()
         observeKeyboard()
         viewModel.loadPets()
+        applyModeIfNeeded()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
+        navigationItem.hidesBackButton = true
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -278,12 +289,12 @@ final class AddReminderController: BaseController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
             
-            backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             backButton.widthAnchor.constraint(equalToConstant: 28),
             backButton.heightAnchor.constraint(equalToConstant: 28),
             
-            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             
             heroCard.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 24),
@@ -394,21 +405,35 @@ final class AddReminderController: BaseController {
         viewModel.onPetsLoaded = { [weak self] items in
             guard let self else { return }
             self.petOptions = items
-            
-            if let first = items.first {
-                self.selectedPetIndex = 0
-                self.petTextField.text = first.name
-            } else {
-                self.petTextField.text = "No pets available"
-            }
-            
             self.petPicker.reloadAllComponents()
+            
+            switch self.mode {
+            case .create:
+                if let first = items.first {
+                    self.selectedPetIndex = 0
+                    self.petTextField.text = first.name
+                } else {
+                    self.petTextField.text = "No pets available"
+                }
+                
+            case .edit(let reminder):
+                if let index = items.firstIndex(where: { $0.id == reminder.petId }) {
+                    self.selectedPetIndex = index
+                    self.petTextField.text = items[index].name
+                    self.petPicker.selectRow(index, inComponent: 0, animated: false)
+                } else if let first = items.first {
+                    self.selectedPetIndex = 0
+                    self.petTextField.text = first.name
+                } else {
+                    self.petTextField.text = "No pets available"
+                }
+            }
         }
         
-        viewModel.onReminderCreated = { [weak self] _ in
+        viewModel.onReminderSaved = { [weak self] _ in
             guard let self else { return }
             self.onReminderSaved?()
-            self.navigationController?.popViewController(animated: true)
+            self.closeScreen()
         }
         
         viewModel.onError = { [weak self] message in
@@ -418,6 +443,45 @@ final class AddReminderController: BaseController {
                 self.statusView.show(message: message, style: .error)
             } else {
                 self.statusView.hide()
+            }
+        }
+    }
+    
+    private func applyModeIfNeeded() {
+        switch mode {
+        case .create:
+            titleLabel.text = "Add Reminder"
+            heroTitleLabel.text = "Create a new task"
+            heroSubtitleLabel.text = "Set reminders for health, shopping, grooming and more."
+            saveButton.setTitle("Save Reminder", for: .normal)
+            
+        case .edit(let item):
+            titleLabel.text = "Edit Reminder"
+            heroTitleLabel.text = "Update reminder"
+            heroSubtitleLabel.text = "Edit details, reschedule or change category."
+            saveButton.setTitle("Save Changes", for: .normal)
+            
+            titleTextField.text = item.title
+            notesTextView.text = item.notes
+            
+            if let dueDateString = item.dueDate {
+                let isoWithFraction = ISO8601DateFormatter()
+                isoWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                
+                let iso = ISO8601DateFormatter()
+                iso.formatOptions = [.withInternetDateTime]
+                
+                if let date = isoWithFraction.date(from: dueDateString) ?? iso.date(from: dueDateString) {
+                    datePicker.date = date
+                    updateDateText()
+                }
+            }
+            
+            if let type = item.type,
+               let categoryIndex = categoryOptions.firstIndex(where: { $0.lowercased() == type.lowercased() }) {
+                selectedCategory = categoryOptions[categoryIndex]
+                categoryTextField.text = selectedCategory
+                categoryPicker.selectRow(categoryIndex, inComponent: 0, animated: false)
             }
         }
     }
@@ -433,7 +497,13 @@ final class AddReminderController: BaseController {
     private func configureDatePicker() {
         datePicker.datePickerMode = .dateAndTime
         datePicker.preferredDatePickerStyle = .wheels
-        datePicker.minimumDate = Date()
+        
+        switch mode {
+        case .create:
+            datePicker.minimumDate = Date()
+        case .edit:
+            datePicker.minimumDate = nil
+        }
     }
     
     private func configureToolbars() {
@@ -505,7 +575,7 @@ final class AddReminderController: BaseController {
     }
     
     @objc private func backTapped() {
-        navigationController?.popViewController(animated: true)
+        closeScreen()
     }
     
     @objc private func doneTapped() {
@@ -531,13 +601,36 @@ final class AddReminderController: BaseController {
     }
     
     @objc private func saveTapped() {
-        viewModel.createReminder(
-            title: titleTextField.text,
-            notes: notesTextView.text,
-            dueDate: datePicker.date,
-            category: selectedCategory,
-            selectedPetIndex: selectedPetIndex
-        )
+        switch mode {
+        case .create:
+            viewModel.createReminder(
+                title: titleTextField.text,
+                notes: notesTextView.text,
+                dueDate: datePicker.date,
+                category: selectedCategory,
+                selectedPetIndex: selectedPetIndex
+            )
+            
+        case .edit(let reminder):
+            viewModel.updateReminder(
+                id: reminder.id,
+                title: titleTextField.text,
+                notes: notesTextView.text,
+                dueDate: datePicker.date,
+                category: selectedCategory,
+                selectedPetIndex: selectedPetIndex
+            )
+        }
+    }
+    
+    private func closeScreen() {
+        if let navigationController, navigationController.viewControllers.first != self {
+            navigationController.popViewController(animated: true)
+        } else if navigationController?.presentingViewController != nil {
+            navigationController?.dismiss(animated: true)
+        } else if presentingViewController != nil {
+            dismiss(animated: true)
+        }
     }
     
     @objc private func clearError() {

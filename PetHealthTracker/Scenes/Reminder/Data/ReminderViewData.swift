@@ -28,11 +28,23 @@ struct ReminderItemViewData {
     let category: ReminderCategory
     let status: ReminderStatus
     let isCompleted: Bool
+    let notes: String?
+    let petId: String?
+    let dueDate: String?
+    let typeRaw: String?
+    let petPhotoUrl: String?
 }
 
 struct ReminderScreenViewData {
     let todayFocusCount: Int
-    let focusPetNames: String
+    let focusPetsText: String
+    let focusPets: [ReminderFocusPet]
     let overdueItems: [ReminderItemViewData]
     let upcomingItems: [ReminderItemViewData]
+    let completedItems: [ReminderItemViewData]
+}
+
+struct ReminderFocusPet {
+    let name: String
+    let photoURL: String?
 }

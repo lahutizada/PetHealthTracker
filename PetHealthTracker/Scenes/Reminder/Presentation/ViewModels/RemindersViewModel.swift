@@ -16,6 +16,7 @@ protocol RemindersViewModelProtocol: AnyObject {
     func reloadReminders()
     func toggleReminderCompleted(id: String)
     func deleteReminder(id: String)
+    func reminder(by id: String) -> ReminderResponse?
 }
 
 final class RemindersViewModel: RemindersViewModelProtocol {
@@ -23,6 +24,7 @@ final class RemindersViewModel: RemindersViewModelProtocol {
     var onLoadingStateChanged: ((Bool) -> Void)?
     var onRemindersLoaded: ((ReminderScreenViewData) -> Void)?
     var onError: ((String) -> Void)?
+    
     
     private let getRemindersUseCase: GetRemindersUseCaseProtocol
     private let updateReminderUseCase: UpdateReminderUseCaseProtocol
@@ -38,6 +40,10 @@ final class RemindersViewModel: RemindersViewModelProtocol {
         self.getRemindersUseCase = getRemindersUseCase
         self.updateReminderUseCase = updateReminderUseCase
         self.deleteReminderUseCase = deleteReminderUseCase
+    }
+    
+    func reminder(by id: String) -> ReminderResponse? {
+        reminders.first { $0.id == id }
     }
     
     func loadReminders() {
@@ -123,27 +129,30 @@ final class RemindersViewModel: RemindersViewModelProtocol {
     }
     
     private func makeViewData(from reminders: [ReminderResponse]) -> ReminderScreenViewData {
+        
         let overdueItems = reminders
             .filter { isOverdue($0) && !$0.completed }
             .map { mapReminderToItem($0, status: .overdue) }
         
         let upcomingItems = reminders
-            .filter { !isOverdue($0) || $0.completed }
-            .map { reminder in
-                mapReminderToItem(
-                    reminder,
-                    status: reminder.completed ? .completed : .upcoming
-                )
-            }
+            .filter { !isOverdue($0) && !$0.completed }
+            .map { mapReminderToItem($0, status: .upcoming) }
+        
+        let completedItems = reminders
+            .filter { $0.completed }
+            .map { mapReminderToItem($0, status: .completed) }
         
         let pendingCount = reminders.filter { !$0.completed }.count
-        let petNames = extractFocusPetNames(from: reminders)
+        let focusPets = extractFocusPets(from: reminders)
+        let focusText = makeFocusPetsText(from: focusPets)
         
         return ReminderScreenViewData(
             todayFocusCount: pendingCount,
-            focusPetNames: petNames,
+            focusPetsText: focusText,
+            focusPets: Array(focusPets.prefix(2)),
             overdueItems: overdueItems,
-            upcomingItems: upcomingItems
+            upcomingItems: upcomingItems,
+            completedItems: completedItems
         )
     }
     
@@ -152,10 +161,15 @@ final class RemindersViewModel: RemindersViewModelProtocol {
             id: reminder.id,
             title: reminder.title,
             subtitle: makeSubtitle(from: reminder),
-            petName: reminder.petName ?? "All Pets",
+            petName: reminder.petName ?? "Unknown pet",
             category: mapCategory(reminder.type),
             status: status,
-            isCompleted: reminder.completed
+            isCompleted: reminder.completed,
+            notes: reminder.notes,
+            petId: reminder.petId,
+            dueDate: reminder.dueDate,
+            typeRaw: reminder.type,
+            petPhotoUrl: reminder.petPhotoUrl
         )
     }
     
@@ -182,26 +196,38 @@ final class RemindersViewModel: RemindersViewModelProtocol {
         
         let calendar = Calendar.current
         
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "h:mm a"
+        
+        let shortFormatter = DateFormatter()
+        shortFormatter.dateFormat = "EEE, MMM d"
+        
+        let fullFormatter = DateFormatter()
+        fullFormatter.dateFormat = "MMM d, yyyy"
+        
         if reminder.completed {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d, yyyy"
-            return "Completed • \(formatter.string(from: dueDate))"
+            if calendar.isDateInToday(dueDate) {
+                return "Completed today"
+            }
+            
+            if calendar.isDateInYesterday(dueDate) {
+                return "Completed yesterday"
+            }
+            
+            return "Completed • \(fullFormatter.string(from: dueDate))"
         }
         
         if calendar.isDateInToday(dueDate) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a"
-            return "Today, \(formatter.string(from: dueDate))"
+            return "Today, \(timeFormatter.string(from: dueDate))"
         }
         
         if calendar.isDateInTomorrow(dueDate) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a"
-            return "Tomorrow, \(formatter.string(from: dueDate))"
+            return "Tomorrow, \(timeFormatter.string(from: dueDate))"
         }
         
         if dueDate < Date() {
             let days = calendar.dateComponents([.day], from: dueDate, to: Date()).day ?? 0
+            
             if days <= 1 {
                 return "Yesterday"
             } else {
@@ -209,9 +235,7 @@ final class RemindersViewModel: RemindersViewModelProtocol {
             }
         }
         
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMM d"
-        return formatter.string(from: dueDate)
+        return shortFormatter.string(from: dueDate)
     }
     
     private func extractFocusPetNames(from reminders: [ReminderResponse]) -> String {
@@ -258,5 +282,43 @@ final class RemindersViewModel: RemindersViewModelProtocol {
         
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: value)
+    }
+    
+    private func extractFocusPets(from reminders: [ReminderResponse]) -> [ReminderFocusPet] {
+        var seenNames = Set<String>()
+        var result: [ReminderFocusPet] = []
+        
+        for reminder in reminders where !reminder.completed {
+            guard let petName = reminder.petName, !petName.isEmpty else { continue }
+            guard !seenNames.contains(petName) else { continue }
+            
+            seenNames.insert(petName)
+            result.append(
+                ReminderFocusPet(
+                    name: petName,
+                    photoURL: reminder.petPhotoUrl
+                )
+            )
+        }
+        
+        return result
+    }
+
+    private func makeFocusPetsText(from pets: [ReminderFocusPet]) -> String {
+        let names = pets.map { $0.name }
+        
+        if names.isEmpty {
+            return "For all pets"
+        }
+        
+        if names.count == 1 {
+            return "For \(names[0])"
+        }
+        
+        if names.count == 2 {
+            return "For \(names[0]) & \(names[1])"
+        }
+        
+        return "For all pets"
     }
 }

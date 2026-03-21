@@ -24,7 +24,7 @@ final class AppCoordinator {
         window.rootViewController = navigationController
         window.makeKeyAndVisible()
         
-        if OnboardingManager.shared.hasSeenOnboarding {
+        if !OnboardingManager.shared.hasSeenOnboarding {
             showOnboarding()
         } else if SessionManager.shared.isLoggedIn {
             showMain()

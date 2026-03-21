@@ -9,9 +9,13 @@ import UIKit
 
 final class ReminderSectionHeaderView: UIView {
     
+    var onToggleTapped: (() -> Void)?
+    
+    private(set) var isExpanded: Bool = true
+    
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 18, weight: .bold)
+        label.font = .systemFont(ofSize: 24, weight: .bold)
         label.textColor = .onboardingBlack
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -19,26 +23,42 @@ final class ReminderSectionHeaderView: UIView {
     
     private let badgeLabel: PaddingLabel = {
         let label = PaddingLabel()
-        label.font = .systemFont(ofSize: 12, weight: .bold)
-        label.textInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-        label.layer.cornerRadius = 12
+        label.font = .systemFont(ofSize: 13, weight: .bold)
+        label.textInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+        label.layer.cornerRadius = 14
         label.clipsToBounds = true
+        label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
+    }()
+    
+    private lazy var toggleButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Hide", for: .normal)
+        button.setTitleColor(.mainBlue, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(toggleTapped), for: .touchUpInside)
+        return button
     }()
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         addSubview(titleLabel)
         addSubview(badgeLabel)
+        addSubview(toggleButton)
         
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: topAnchor),
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            titleLabel.bottomAnchor.constraint(equalTo: bottomAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             
-            badgeLabel.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            badgeLabel.trailingAnchor.constraint(equalTo: trailingAnchor)
+            toggleButton.trailingAnchor.constraint(equalTo: trailingAnchor),
+            toggleButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            
+            badgeLabel.trailingAnchor.constraint(equalTo: toggleButton.leadingAnchor, constant: -10),
+            badgeLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: badgeLabel.leadingAnchor, constant: -12)
         ])
     }
     
@@ -46,18 +66,39 @@ final class ReminderSectionHeaderView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func configure(title: String, badgeText: String?, isDanger: Bool) {
+    func configure(
+        title: String,
+        badgeText: String?,
+        isDanger: Bool,
+        isExpanded: Bool = true
+    ) {
         titleLabel.text = title
+        self.isExpanded = isExpanded
         
-        if let badgeText {
-            badgeLabel.isHidden = false
+        let hasItems = badgeText != nil && !(badgeText?.isEmpty ?? true)
+        
+        toggleButton.isHidden = !hasItems
+        badgeLabel.isHidden = !hasItems
+        
+        if hasItems {
+            toggleButton.setTitle(isExpanded ? "Hide" : "Show all", for: .normal)
             badgeLabel.text = badgeText
-            badgeLabel.textColor = isDanger ? .systemRed : .mainBlue
-            badgeLabel.backgroundColor = isDanger
-                ? UIColor.systemRed.withAlphaComponent(0.12)
-                : UIColor.mainBlue.withAlphaComponent(0.12)
+            
+            if isDanger {
+                badgeLabel.textColor = .systemRed
+                badgeLabel.backgroundColor = UIColor.systemRed.withAlphaComponent(0.12)
+            } else {
+                badgeLabel.textColor = .mainBlue
+                badgeLabel.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.12)
+            }
         } else {
-            badgeLabel.isHidden = true
+            badgeLabel.text = nil
         }
+    }
+    
+    @objc private func toggleTapped() {
+        isExpanded.toggle()
+        toggleButton.setTitle(isExpanded ? "Hide" : "Show all", for: .normal)
+        onToggleTapped?()
     }
 }

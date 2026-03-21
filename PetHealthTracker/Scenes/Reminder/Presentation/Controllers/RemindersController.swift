@@ -9,6 +9,13 @@ import UIKit
 
 final class RemindersController: BaseController {
     
+    private var isOverdueExpanded = true
+    private var isUpcomingExpanded = true
+    private var isCompletedExpanded = true
+    private var overdueHeightConstraint: NSLayoutConstraint!
+    private var upcomingHeightConstraint: NSLayoutConstraint!
+    private var completedHeightConstraint: NSLayoutConstraint!
+    
     private let viewModel: RemindersViewModelProtocol
     
     init(viewModel: RemindersViewModelProtocol = DIContainer.shared.makeRemindersViewModel()) {
@@ -94,6 +101,20 @@ final class RemindersController: BaseController {
         return stack
     }()
     
+    private lazy var completedHeaderView: ReminderSectionHeaderView = {
+        let view = ReminderSectionHeaderView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private lazy var completedStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
     private lazy var addButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "plus"), for: .normal)
@@ -126,10 +147,88 @@ final class RemindersController: BaseController {
         contentView.addSubview(titleLabel)
         contentView.addSubview(calendarButton)
         contentView.addSubview(focusCardView)
+        
         contentView.addSubview(overdueHeaderView)
         contentView.addSubview(overdueStackView)
+        
         contentView.addSubview(upcomingHeaderView)
         contentView.addSubview(upcomingStackView)
+        
+        contentView.addSubview(completedHeaderView)
+        contentView.addSubview(completedStackView)
+        
+        overdueHeaderView.onToggleTapped = { [weak self] in
+            guard let self else { return }
+            
+            self.isOverdueExpanded.toggle()
+            
+            let isExpanded = self.isOverdueExpanded
+            
+            if isExpanded {
+                self.overdueStackView.isHidden = false
+                self.overdueStackView.alpha = 0
+                self.overdueHeightConstraint.isActive = false
+            } else {
+                self.overdueHeightConstraint.isActive = true
+            }
+            
+            UIView.animate(withDuration: 0.25, animations: {
+                self.overdueStackView.alpha = isExpanded ? 1 : 0
+                self.view.layoutIfNeeded()
+            }, completion: { _ in
+                if !isExpanded {
+                    self.overdueStackView.isHidden = true
+                }
+            })
+        }
+
+        upcomingHeaderView.onToggleTapped = { [weak self] in
+            guard let self else { return }
+            
+            self.isUpcomingExpanded.toggle()
+            let isExpanded = self.isUpcomingExpanded
+            
+            if isExpanded {
+                self.upcomingStackView.isHidden = false
+                self.upcomingStackView.alpha = 0
+                self.upcomingHeightConstraint.isActive = false
+            } else {
+                self.upcomingHeightConstraint.isActive = true
+            }
+            
+            UIView.animate(withDuration: 0.25, animations: {
+                self.upcomingStackView.alpha = isExpanded ? 1 : 0
+                self.view.layoutIfNeeded()
+            }, completion: { _ in
+                if !isExpanded {
+                    self.upcomingStackView.isHidden = true
+                }
+            })
+        }
+
+        completedHeaderView.onToggleTapped = { [weak self] in
+            guard let self else { return }
+            
+            self.isCompletedExpanded.toggle()
+            let isExpanded = self.isCompletedExpanded
+            
+            if isExpanded {
+                self.completedStackView.isHidden = false
+                self.completedStackView.alpha = 0
+                self.completedHeightConstraint.isActive = false
+            } else {
+                self.completedHeightConstraint.isActive = true
+            }
+            
+            UIView.animate(withDuration: 0.25, animations: {
+                self.completedStackView.alpha = isExpanded ? 1 : 0
+                self.view.layoutIfNeeded()
+            }, completion: { _ in
+                if !isExpanded {
+                    self.completedStackView.isHidden = true
+                }
+            })
+        }
     }
     
     override func configureConstraints() {
@@ -179,18 +278,37 @@ final class RemindersController: BaseController {
             upcomingStackView.topAnchor.constraint(equalTo: upcomingHeaderView.bottomAnchor, constant: 14),
             upcomingStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             upcomingStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            upcomingStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -120),
+            
+            completedHeaderView.topAnchor.constraint(equalTo: upcomingStackView.bottomAnchor, constant: 28),
+            completedHeaderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            completedHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            completedHeaderView.heightAnchor.constraint(equalToConstant: 28),
+            
+            completedStackView.topAnchor.constraint(equalTo: completedHeaderView.bottomAnchor, constant: 14),
+            completedStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            completedStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            completedStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -120),
             
             addButton.widthAnchor.constraint(equalToConstant: 60),
             addButton.heightAnchor.constraint(equalToConstant: 60),
             addButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             addButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -18)
         ])
+        
+        overdueHeightConstraint = overdueStackView.heightAnchor.constraint(equalToConstant: 0)
+        overdueHeightConstraint.isActive = false
+
+        upcomingHeightConstraint = upcomingStackView.heightAnchor.constraint(equalToConstant: 0)
+        upcomingHeightConstraint.isActive = false
+
+        completedHeightConstraint = completedStackView.heightAnchor.constraint(equalToConstant: 0)
+        completedHeightConstraint.isActive = false
+        
     }
     
     override func configureViewModel() {
         viewModel.onLoadingStateChanged = { isLoading in
-            print("Reminders loading:", isLoading)
+            print(isLoading ? "Loading reminders..." : "Reminders loaded")
         }
         
         viewModel.onRemindersLoaded = { [weak self] viewData in
@@ -207,23 +325,38 @@ final class RemindersController: BaseController {
     private func applyData(_ viewData: ReminderScreenViewData) {
         focusCardView.configure(
             taskCount: viewData.todayFocusCount,
-            petsText: viewData.focusPetNames
+            petsText: viewData.focusPetsText,
+            pets: viewData.focusPets
         )
         
         overdueHeaderView.configure(
             title: "Overdue",
             badgeText: viewData.overdueItems.isEmpty ? nil : "\(viewData.overdueItems.count) LATE",
-            isDanger: true
+            isDanger: true,
+            isExpanded: isOverdueExpanded
         )
         
         upcomingHeaderView.configure(
             title: "Upcoming",
-            badgeText: nil,
-            isDanger: false
+            badgeText: viewData.upcomingItems.isEmpty ? nil : "\(viewData.upcomingItems.count) UPCOMING",
+            isDanger: false,
+            isExpanded: isUpcomingExpanded
+        )
+        
+        completedHeaderView.configure(
+            title: "Completed",
+            badgeText: viewData.completedItems.isEmpty ? nil : "\(viewData.completedItems.count) COMPLETED",
+            isDanger: false,
+            isExpanded: isCompletedExpanded
         )
         
         applyItems(viewData.overdueItems, to: overdueStackView)
         applyItems(viewData.upcomingItems, to: upcomingStackView)
+        applyItems(viewData.completedItems, to: completedStackView)
+        
+        overdueStackView.isHidden = !isOverdueExpanded
+        upcomingStackView.isHidden = !isUpcomingExpanded
+        completedStackView.isHidden = !isCompletedExpanded
     }
     
     private func applyItems(_ items: [ReminderItemViewData], to stackView: UIStackView) {
@@ -245,8 +378,22 @@ final class RemindersController: BaseController {
                 self?.showDeleteAlert(for: item.id)
             }
             
+            card.onEditTapped = { [weak self] in
+                self?.openEditReminder(for: item.id)
+            }
+            
             stackView.addArrangedSubview(card)
         }
+    }
+    
+    private func openEditReminder(for id: String) {
+        guard let reminder = viewModel.reminder(by: id) else { return }
+        
+        let vc = AddReminderController(mode: .edit(reminder))
+        vc.onReminderSaved = { [weak self] in
+            self?.viewModel.reloadReminders()
+        }
+        navigationController?.pushViewController(vc, animated: true)
     }
     
     private func showDeleteAlert(for id: String) {

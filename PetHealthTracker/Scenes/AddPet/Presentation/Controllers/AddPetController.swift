@@ -283,6 +283,12 @@ final class AddPetController: BaseController {
         applyModeIfNeeded()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        navigationItem.hidesBackButton = true
+    }
+    
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         scrollView.contentInset.bottom = 0
@@ -471,7 +477,7 @@ final class AddPetController: BaseController {
             guard let self else { return }
             self.statusView.hide()
             self.onPetSaved?(pet)
-            self.navigationController?.popViewController(animated: true)
+            self.closeScreen()
         }
     }
     
@@ -679,7 +685,7 @@ final class AddPetController: BaseController {
     }
     
     @objc private func backTapped() {
-        navigationController?.popViewController(animated: true)
+        closeScreen()
     }
     
     @objc private func selectPhotoTapped() {
@@ -751,6 +757,16 @@ final class AddPetController: BaseController {
                 image: selectedImage,
                 removePhoto: shouldRemovePhoto
             )
+        }
+    }
+    
+    private func closeScreen() {
+        if let navigationController, navigationController.viewControllers.first != self {
+            navigationController.popViewController(animated: true)
+        } else if navigationController?.presentingViewController != nil {
+            navigationController?.dismiss(animated: true)
+        } else if presentingViewController != nil {
+            dismiss(animated: true)
         }
     }
     

@@ -9,11 +9,12 @@ import Foundation
 
 struct ReminderResponse: Codable {
     let id: String
+    let petId: String?
     let title: String
     let notes: String?
     let dueDate: String?
     let type: String?
     let completed: Bool
-    let petId: String?
     let petName: String?
+    let petPhotoUrl: String?
 }

@@ -11,53 +11,62 @@ final class ReminderItemCardView: UIView {
     
     var onToggleCompleted: (() -> Void)?
     var onDeleteTapped: (() -> Void)?
+    var onEditTapped: (() -> Void)?
+    
+    private var isExpanded = false
+    private var currentItem: ReminderItemViewData?
     
     private let containerView: UIView = {
         let view = UIView()
         view.backgroundColor = .white
-        view.layer.cornerRadius = 20
-        view.layer.borderWidth = 1
-        view.layer.borderColor = UIColor.systemGray5.cgColor
+        view.layer.cornerRadius = 22
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.05
+        view.layer.shadowRadius = 12
+        view.layer.shadowOffset = CGSize(width: 0, height: 4)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
-    let checkBoxButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.layer.cornerRadius = 10
-        button.layer.borderWidth = 2
-        button.layer.borderColor = UIColor.systemGray4.cgColor
-        button.backgroundColor = .clear
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-    
-    let titleLabel: UILabel = {
+    private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 17, weight: .bold)
+        label.font = .systemFont(ofSize: 20, weight: .bold)
         label.textColor = .onboardingBlack
+        label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    let subtitleLabel: UILabel = {
+    private let dateLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.numberOfLines = 1
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    let metaLabel: UILabel = {
+    private let metaLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = .onboardingGray
+        label.numberOfLines = 1
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let notesLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .onboardingGray
+        label.numberOfLines = 0
+        label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    private let iconWrapView: UIView = {
+    private let categoryIconWrap: UIView = {
         let view = UIView()
-        view.layer.cornerRadius = 18
+        view.layer.cornerRadius = 22
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -68,11 +77,45 @@ final class ReminderItemCardView: UIView {
         return imageView
     }()
     
+    private lazy var editButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "pencil"), for: .normal)
+        button.tintColor = .systemGray3
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var expandButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.tintColor = .systemGray3
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(toggleExpandedTapped), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var checkButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.tintColor = .systemGray3
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(toggleCompletedTapped), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var swipeDeleteGesture: UISwipeGestureRecognizer = {
+        let gesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeDelete))
+        gesture.direction = .left
+        return gesture
+    }()
+    
+    private var collapsedBottomConstraint: NSLayoutConstraint!
+    private var expandedBottomConstraint: NSLayoutConstraint!
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
         setupConstraints()
-        bindActions()
+        addGestureRecognizer(swipeDeleteGesture)
     }
     
     required init?(coder: NSCoder) {
@@ -83,12 +126,17 @@ final class ReminderItemCardView: UIView {
         backgroundColor = .clear
         addSubview(containerView)
         
-        containerView.addSubview(checkBoxButton)
         containerView.addSubview(titleLabel)
-        containerView.addSubview(subtitleLabel)
+        containerView.addSubview(dateLabel)
         containerView.addSubview(metaLabel)
-        containerView.addSubview(iconWrapView)
-        iconWrapView.addSubview(categoryIconView)
+        containerView.addSubview(notesLabel)
+        
+        containerView.addSubview(editButton)
+        containerView.addSubview(expandButton)
+        containerView.addSubview(checkButton)
+        
+        containerView.addSubview(categoryIconWrap)
+        categoryIconWrap.addSubview(categoryIconView)
     }
     
     private func setupConstraints() {
@@ -97,111 +145,181 @@ final class ReminderItemCardView: UIView {
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            containerView.heightAnchor.constraint(equalToConstant: 84),
             
-            checkBoxButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            checkBoxButton.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            checkBoxButton.widthAnchor.constraint(equalToConstant: 24),
-            checkBoxButton.heightAnchor.constraint(equalToConstant: 24),
+            editButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            editButton.trailingAnchor.constraint(equalTo: expandButton.leadingAnchor, constant: -12),
+            editButton.widthAnchor.constraint(equalToConstant: 22),
+            editButton.heightAnchor.constraint(equalToConstant: 22),
             
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: checkBoxButton.trailingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: iconWrapView.leadingAnchor, constant: -12),
+            expandButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            expandButton.trailingAnchor.constraint(equalTo: checkButton.leadingAnchor, constant: -12),
+            expandButton.widthAnchor.constraint(equalToConstant: 22),
+            expandButton.heightAnchor.constraint(equalToConstant: 22),
             
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
-            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            checkButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 14),
+            checkButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            checkButton.widthAnchor.constraint(equalToConstant: 28),
+            checkButton.heightAnchor.constraint(equalToConstant: 28),
             
-            metaLabel.centerYAnchor.constraint(equalTo: subtitleLabel.centerYAnchor),
-            metaLabel.leadingAnchor.constraint(equalTo: subtitleLabel.trailingAnchor, constant: 6),
-            metaLabel.trailingAnchor.constraint(equalTo: iconWrapView.leadingAnchor, constant: -12),
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 28),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 22),
+            titleLabel.trailingAnchor.constraint(equalTo: categoryIconWrap.leadingAnchor, constant: -18),
             
-            iconWrapView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            iconWrapView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            iconWrapView.widthAnchor.constraint(equalToConstant: 36),
-            iconWrapView.heightAnchor.constraint(equalToConstant: 36),
+            dateLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+            dateLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            dateLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             
-            categoryIconView.centerXAnchor.constraint(equalTo: iconWrapView.centerXAnchor),
-            categoryIconView.centerYAnchor.constraint(equalTo: iconWrapView.centerYAnchor),
-            categoryIconView.widthAnchor.constraint(equalToConstant: 18),
-            categoryIconView.heightAnchor.constraint(equalToConstant: 18)
+            metaLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 10),
+            metaLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            metaLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            
+            notesLabel.topAnchor.constraint(equalTo: metaLabel.bottomAnchor, constant: 14),
+            notesLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            notesLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            
+            categoryIconWrap.topAnchor.constraint(equalTo: titleLabel.topAnchor, constant: 20),
+            categoryIconWrap.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            categoryIconWrap.widthAnchor.constraint(equalToConstant: 44),
+            categoryIconWrap.heightAnchor.constraint(equalToConstant: 44),
+            
+            categoryIconView.centerXAnchor.constraint(equalTo: categoryIconWrap.centerXAnchor),
+            categoryIconView.centerYAnchor.constraint(equalTo: categoryIconWrap.centerYAnchor),
+            categoryIconView.widthAnchor.constraint(equalToConstant: 20),
+            categoryIconView.heightAnchor.constraint(equalToConstant: 20)
         ])
-    }
-    
-    private func bindActions() {
-        checkBoxButton.addTarget(self, action: #selector(toggleTapped), for: .touchUpInside)
         
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-        containerView.addGestureRecognizer(longPress)
+        collapsedBottomConstraint = metaLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -28)
+        expandedBottomConstraint = notesLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -22)
+        
+        collapsedBottomConstraint.isActive = true
     }
     
     func configure(with item: ReminderItemViewData) {
+        currentItem = item
+        
         titleLabel.text = item.title
-        metaLabel.text = "• \(item.petName) • \(metaText(for: item.category))"
+        dateLabel.text = item.subtitle
+        metaLabel.text = makeMetaText(petName: item.petName, category: item.category)
+        notesLabel.text = item.notes
         
-        switch item.status {
-        case .overdue:
-            subtitleLabel.text = item.subtitle
-            subtitleLabel.textColor = .systemRed
-        case .upcoming:
-            subtitleLabel.text = item.subtitle
-            subtitleLabel.textColor = .mainBlue
-        case .completed:
-            subtitleLabel.text = item.subtitle
-            subtitleLabel.textColor = .onboardingGray
-        }
+        let hasNotes = !(item.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        expandButton.isHidden = !hasNotes
         
-        if item.isCompleted {
-            checkBoxButton.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.12)
-            checkBoxButton.layer.borderColor = UIColor.mainBlue.cgColor
-            checkBoxButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
-            checkBoxButton.tintColor = .mainBlue
-            titleLabel.textColor = .onboardingGray
-        } else {
-            checkBoxButton.backgroundColor = .clear
-            checkBoxButton.layer.borderColor = UIColor.systemGray4.cgColor
-            checkBoxButton.setImage(nil, for: .normal)
-            titleLabel.textColor = .onboardingBlack
-        }
+        let checkImageName = item.isCompleted ? "checkmark.circle.fill" : "circle"
+        checkButton.setImage(UIImage(systemName: checkImageName), for: .normal)
+        checkButton.tintColor = item.isCompleted ? .systemGreen : .mainBlue
+        
+        let expandImageName = isExpanded ? "chevron.up" : "chevron.down"
+        expandButton.setImage(UIImage(systemName: expandImageName), for: .normal)
         
         applyCategoryStyle(item.category)
+        applyDateStyle(item.status)
+        applyCompletedStyle(item.isCompleted)
+        updateExpandedState(animated: false)
     }
     
-    private func metaText(for category: ReminderCategory) -> String {
+    private func makeMetaText(petName: String, category: ReminderCategory) -> String {
+        let categoryText: String
+        
         switch category {
-        case .health: return "Health"
-        case .shopping: return "Shopping"
-        case .hygiene: return "Hygiene"
-        case .general: return "General"
+        case .health:
+            categoryText = "Health"
+        case .shopping:
+            categoryText = "Shopping"
+        case .hygiene:
+            categoryText = "Hygiene"
+        case .general:
+            categoryText = "General"
         }
+        
+        return "\(petName) • \(categoryText)"
     }
     
     private func applyCategoryStyle(_ category: ReminderCategory) {
         switch category {
         case .health:
-            iconWrapView.backgroundColor = UIColor.systemRed.withAlphaComponent(0.12)
-            categoryIconView.image = UIImage(systemName: "cross.case.fill")
+            categoryIconWrap.backgroundColor = UIColor.systemRed.withAlphaComponent(0.10)
+            categoryIconView.image = UIImage(systemName: "heart.text.square.fill")
             categoryIconView.tintColor = .systemRed
+            
         case .shopping:
-            iconWrapView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
+            categoryIconWrap.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.10)
             categoryIconView.image = UIImage(systemName: "bag.fill")
             categoryIconView.tintColor = .systemOrange
+            
         case .hygiene:
-            iconWrapView.backgroundColor = UIColor.systemPurple.withAlphaComponent(0.12)
+            categoryIconWrap.backgroundColor = UIColor.systemPurple.withAlphaComponent(0.10)
             categoryIconView.image = UIImage(systemName: "scissors")
             categoryIconView.tintColor = .systemPurple
+            
         case .general:
-            iconWrapView.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.12)
-            categoryIconView.image = UIImage(systemName: "cross.vial.fill")
-            categoryIconView.tintColor = .systemGreen
+            categoryIconWrap.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.10)
+            categoryIconView.image = UIImage(systemName: "bell.fill")
+            categoryIconView.tintColor = .mainBlue
         }
     }
     
-    @objc private func toggleTapped() {
+    private func applyDateStyle(_ status: ReminderStatus) {
+        switch status {
+        case .overdue:
+            dateLabel.textColor = .systemRed
+        case .upcoming:
+            dateLabel.textColor = .mainBlue
+        case .completed:
+            dateLabel.textColor = .systemGray
+        }
+    }
+    
+    private func applyCompletedStyle(_ isCompleted: Bool) {
+        titleLabel.alpha = isCompleted ? 0.7 : 1.0
+        dateLabel.alpha = isCompleted ? 0.85 : 1.0
+        metaLabel.alpha = isCompleted ? 0.75 : 1.0
+        categoryIconWrap.alpha = isCompleted ? 0.75 : 1.0
+        notesLabel.alpha = isCompleted ? 0.75 : 1.0
+    }
+    
+    private func updateExpandedState(animated: Bool) {
+        let hasNotes = !(currentItem?.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        
+        notesLabel.isHidden = !isExpanded || !hasNotes
+        collapsedBottomConstraint.isActive = !isExpanded || !hasNotes
+        expandedBottomConstraint.isActive = isExpanded && hasNotes
+        
+        let imageName = isExpanded ? "chevron.up" : "chevron.down"
+        expandButton.setImage(UIImage(systemName: imageName), for: .normal)
+        
+        if animated {
+            UIView.performWithoutAnimation {
+                self.superview?.layoutIfNeeded()
+                self.layoutIfNeeded()
+            }
+        } else {
+            self.superview?.layoutIfNeeded()
+            self.layoutIfNeeded()
+        }
+    }
+    
+    @objc private func toggleCompletedTapped() {
+        UIView.animate(withDuration: 0.18, animations: {
+            self.transform = CGAffineTransform(scaleX: 0.985, y: 0.985)
+        }) { _ in
+            UIView.animate(withDuration: 0.18) {
+                self.transform = .identity
+            }
+        }
         onToggleCompleted?()
     }
     
-    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        guard gesture.state == .began else { return }
+    @objc private func toggleExpandedTapped() {
+        isExpanded.toggle()
+        updateExpandedState(animated: true)
+    }
+    
+    @objc private func editTapped() {
+        onEditTapped?()
+    }
+    
+    @objc private func handleSwipeDelete() {
         onDeleteTapped?()
     }
 }
