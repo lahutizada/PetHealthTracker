@@ -290,16 +290,41 @@ final class PetDetailsController: BaseController {
         badgeBackground: UIColor.systemOrange.withAlphaComponent(0.14)
     )
     
+    private lazy var dewormingCard = makeOverviewCard(
+        icon: "pills.fill",
+        iconBackground: UIColor.systemPurple.withAlphaComponent(0.16),
+        iconTint: .systemPurple,
+        title: "Deworming",
+        subtitle: "No records yet",
+        badgeText: "NO DATA",
+        badgeTextColor: .systemGray,
+        badgeBackground: UIColor.systemGray5
+    )
+    
     private lazy var healthCardsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
             vaccinationCard.container,
+            dewormingCard.container,
             activityCard.container
         ])
         stack.axis = .horizontal
         stack.spacing = 14
-        stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
+    }()
+    
+    private lazy var healthScrollView: UIScrollView = {
+        let view = UIScrollView()
+        view.showsHorizontalScrollIndicator = false
+        view.alwaysBounceHorizontal = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var healthScrollContentView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
     }()
     
     // MARK: - Upcoming Visit
@@ -433,7 +458,9 @@ final class PetDetailsController: BaseController {
         
         contentView.addSubview(healthTitleLabel)
         contentView.addSubview(healthViewAllButton)
-        contentView.addSubview(healthCardsStackView)
+        contentView.addSubview(healthScrollView)
+        healthScrollView.addSubview(healthScrollContentView)
+        healthScrollContentView.addSubview(healthCardsStackView)
         
         contentView.addSubview(upcomingVisitCard)
         upcomingVisitCard.addSubview(upcomingVisitTitleLabel)
@@ -560,15 +587,31 @@ final class PetDetailsController: BaseController {
             
             healthTitleLabel.topAnchor.constraint(equalTo: growthCard.bottomAnchor, constant: 28),
             healthTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            
+
             healthViewAllButton.centerYAnchor.constraint(equalTo: healthTitleLabel.centerYAnchor),
             healthViewAllButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+
+            healthScrollView.topAnchor.constraint(equalTo: healthTitleLabel.bottomAnchor, constant: 16),
+            healthScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            healthScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            healthScrollView.heightAnchor.constraint(equalToConstant: 190),
+
+            healthScrollContentView.topAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.topAnchor),
+            healthScrollContentView.leadingAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.leadingAnchor),
+            healthScrollContentView.trailingAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.trailingAnchor),
+            healthScrollContentView.bottomAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.bottomAnchor),
+            healthScrollContentView.heightAnchor.constraint(equalTo: healthScrollView.frameLayoutGuide.heightAnchor),
+
+            healthCardsStackView.topAnchor.constraint(equalTo: healthScrollContentView.topAnchor),
+            healthCardsStackView.leadingAnchor.constraint(equalTo: healthScrollContentView.leadingAnchor, constant: 20),
+            healthCardsStackView.trailingAnchor.constraint(equalTo: healthScrollContentView.trailingAnchor, constant: -20),
+            healthCardsStackView.bottomAnchor.constraint(equalTo: healthScrollContentView.bottomAnchor),
+
+            vaccinationCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
+            dewormingCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
+            activityCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
             
-            healthCardsStackView.topAnchor.constraint(equalTo: healthTitleLabel.bottomAnchor, constant: 16),
-            healthCardsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            healthCardsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            
-            upcomingVisitCard.topAnchor.constraint(equalTo: healthCardsStackView.bottomAnchor, constant: 24),
+            upcomingVisitCard.topAnchor.constraint(equalTo: healthScrollView.bottomAnchor, constant: 24),
             upcomingVisitCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             upcomingVisitCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             upcomingVisitCard.heightAnchor.constraint(equalToConstant: 190),
@@ -613,6 +656,10 @@ final class PetDetailsController: BaseController {
         viewModel.onPetLoaded = { [weak self] pet in
             self?.pet = pet
             self?.applyPet()
+        }
+        
+        viewModel.onHealthOverviewLoaded = { [weak self] viewData in
+            self?.applyHealthOverview(viewData)
         }
 
         viewModel.onLoadingStateChanged = { isLoading in
@@ -757,21 +804,23 @@ final class PetDetailsController: BaseController {
         badgeText: String,
         badgeTextColor: UIColor,
         badgeBackground: UIColor
-    ) -> (container: UIView, badgeLabel: UILabel) {
+    ) -> (container: UIView, subtitleLabel: UILabel, badgeLabel: UILabel) {
+        
         let container = makeWhiteCard()
         
         let iconWrap = UIView()
         iconWrap.backgroundColor = iconBackground
-        iconWrap.layer.cornerRadius = 18
+        iconWrap.layer.cornerRadius = 20
         iconWrap.translatesAutoresizingMaskIntoConstraints = false
         
         let iconView = UIImageView(image: UIImage(systemName: icon))
         iconView.tintColor = iconTint
+        iconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         iconView.translatesAutoresizingMaskIntoConstraints = false
         
         let titleLabel = UILabel()
         titleLabel.text = title
-        titleLabel.font = .systemFont(ofSize: 16, weight: .bold)
+        titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
         titleLabel.textColor = .onboardingBlack
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         
@@ -779,7 +828,7 @@ final class PetDetailsController: BaseController {
         subtitleLabel.text = subtitle
         subtitleLabel.font = .systemFont(ofSize: 14, weight: .medium)
         subtitleLabel.textColor = .onboardingGray
-        subtitleLabel.numberOfLines = 0
+        subtitleLabel.numberOfLines = 2
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         
         let badgeLabel = UILabel()
@@ -801,19 +850,17 @@ final class PetDetailsController: BaseController {
         NSLayoutConstraint.activate([
             container.heightAnchor.constraint(equalToConstant: 178),
             
-            iconWrap.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
-            iconWrap.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 18),
-            iconWrap.widthAnchor.constraint(equalToConstant: 36),
-            iconWrap.heightAnchor.constraint(equalToConstant: 36),
+            iconWrap.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
+            iconWrap.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            iconWrap.widthAnchor.constraint(equalToConstant: 40),
+            iconWrap.heightAnchor.constraint(equalToConstant: 40),
             
             iconView.centerXAnchor.constraint(equalTo: iconWrap.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: iconWrap.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 18),
-            iconView.heightAnchor.constraint(equalToConstant: 18),
             
-            titleLabel.topAnchor.constraint(equalTo: iconWrap.bottomAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 18),
-            titleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -18),
+            titleLabel.topAnchor.constraint(equalTo: iconWrap.bottomAnchor, constant: 18),
+            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
             
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
@@ -821,11 +868,11 @@ final class PetDetailsController: BaseController {
             
             badgeLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 14),
             badgeLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            badgeLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 118),
-            badgeLabel.heightAnchor.constraint(equalToConstant: 24)
+            badgeLabel.heightAnchor.constraint(equalToConstant: 26),
+            badgeLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 110)
         ])
         
-        return (container, badgeLabel)
+        return (container, subtitleLabel, badgeLabel)
     }
     
     // MARK: - Helpers
@@ -911,6 +958,50 @@ final class PetDetailsController: BaseController {
         }
     }
     
+    private func makePreventiveTitleLabel() -> UILabel {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .bold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }
+
+    private func makePreventiveSubtitleLabel() -> UILabel {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }
+
+    private func makePreventiveStatusLabel() -> PaddingLabel {
+        let label = PaddingLabel()
+        label.font = .systemFont(ofSize: 12, weight: .bold)
+        label.textInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        label.layer.cornerRadius = 10
+        label.clipsToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }
+    
+    private func applyPreventiveStatusStyle(_ label: UILabel, text: String) {
+        switch text.lowercased() {
+        case "overdue":
+            label.textColor = .systemRed
+            label.backgroundColor = UIColor.systemRed.withAlphaComponent(0.12)
+        case "due soon":
+            label.textColor = .systemOrange
+            label.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
+        case "up to date":
+            label.textColor = .systemGreen
+            label.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.12)
+        default:
+            label.textColor = .mainBlue
+            label.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.12)
+        }
+    }
+    
     private func parseDate(_ value: String?) -> Date? {
         guard let value, !value.isEmpty else { return nil }
         
@@ -946,6 +1037,80 @@ final class PetDetailsController: BaseController {
         return formatter.date(from: value)
     }
     
+    private func applyHealthOverview(_ viewData: PetHealthOverviewViewData) {
+        updateOverviewCard(
+            vaccinationCard,
+            subtitle: viewData.vaccination.subtitle,
+            statusText: viewData.vaccination.statusText
+        )
+        
+        updateOverviewCard(
+            dewormingCard,
+            subtitle: viewData.deworming.subtitle,
+            statusText: viewData.deworming.statusText
+        )
+        
+        updateOverviewCard(
+            activityCard,
+            subtitle: viewData.activity.subtitle,
+            statusText: viewData.activity.statusText
+        )
+        
+        upcomingVisitCard.isHidden = false
+        
+        if let vetVisit = viewData.upcomingVetVisit {
+            upcomingVisitBadge.isHidden = false
+            visitDateCircle.isHidden = false
+            visitTimeBadge.isHidden = false
+            
+            upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+            upcomingVisitBadge.text = vetVisit.badgeText
+            
+            let parts = vetVisit.dateText.components(separatedBy: " ")
+            visitMonthLabel.text = parts.first ?? "—"
+            visitDayLabel.text = parts.count > 1 ? parts[1] : "—"
+            
+            visitTitleLabel.text = vetVisit.title
+            visitSubtitleLabel.text = vetVisit.clinicName
+            visitTimeBadge.text = "◷ \(vetVisit.timeText)"
+        } else {
+            upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+            upcomingVisitBadge.isHidden = true
+            visitDateCircle.isHidden = true
+            visitTimeBadge.isHidden = true
+            
+            visitTitleLabel.text = "No upcoming vet visits"
+            visitSubtitleLabel.text = "Add a reminder with type vet to see your next appointment here."
+        }
+    }
+    
+    private func updateOverviewCard(
+        _ card: (container: UIView, subtitleLabel: UILabel, badgeLabel: UILabel),
+        subtitle: String,
+        statusText: String
+    ) {
+        card.subtitleLabel.text = subtitle
+        card.badgeLabel.text = statusText
+
+        switch statusText.lowercased() {
+        case "overdue":
+            card.badgeLabel.textColor = .systemRed
+            card.badgeLabel.backgroundColor = UIColor.systemRed.withAlphaComponent(0.14)
+
+        case "due soon":
+            card.badgeLabel.textColor = .systemOrange
+            card.badgeLabel.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.14)
+
+        case "up to date":
+            card.badgeLabel.textColor = .systemGreen
+            card.badgeLabel.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.14)
+
+        default:
+            card.badgeLabel.textColor = .mainBlue
+            card.badgeLabel.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.14)
+        }
+    }
+    
     // MARK: - Actions
     
     @objc private func backTapped() {
@@ -967,5 +1132,6 @@ final class PetDetailsController: BaseController {
     @objc private func mainActionTapped() {
         viewModel.setMainPet()
     }
+    
 }
 

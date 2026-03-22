@@ -331,7 +331,10 @@ final class HomeController: BaseController {
         
         let iconView = UIImageView(image: UIImage(systemName: icon))
         iconView.tintColor = .mainBlue
+        iconView.contentMode = .scaleAspectFit
         iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 22).isActive = true
         
         let titleLabel = UILabel()
         titleLabel.text = title
@@ -341,20 +344,21 @@ final class HomeController: BaseController {
         titleLabel.numberOfLines = 2
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        button.addSubview(iconView)
-        button.addSubview(titleLabel)
+        let contentStack = UIStackView(arrangedSubviews: [iconView, titleLabel])
+        contentStack.axis = .vertical
+        contentStack.alignment = .center
+        contentStack.spacing = 10
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        button.addSubview(contentStack)
         
         NSLayoutConstraint.activate([
             button.heightAnchor.constraint(equalToConstant: 92),
             
-            iconView.topAnchor.constraint(equalTo: button.topAnchor, constant: 16),
-            iconView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 22),
-            iconView.heightAnchor.constraint(equalToConstant: 22),
-            
-            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 10),
-            titleLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8)
+            contentStack.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            contentStack.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            contentStack.leadingAnchor.constraint(greaterThanOrEqualTo: button.leadingAnchor, constant: 8),
+            contentStack.trailingAnchor.constraint(lessThanOrEqualTo: button.trailingAnchor, constant: -8)
         ])
         
         button.addTarget(self, action: action, for: .touchUpInside)
