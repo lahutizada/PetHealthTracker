@@ -175,12 +175,18 @@ final class RemindersViewModel: RemindersViewModelProtocol {
     
     private func mapCategory(_ type: String?) -> ReminderCategory {
         switch type?.lowercased() {
-        case "health":
-            return .health
+        case "vet":
+            return .vet
+        case "vaccination":
+            return .vaccination
+        case "deworming":
+            return .deworming
+        case "medication":
+            return .medication
+        case "grooming":
+            return .grooming
         case "shopping":
             return .shopping
-        case "hygiene":
-            return .hygiene
         default:
             return .general
         }

@@ -9,6 +9,10 @@ import UIKit
 
 final class ReminderFocusCardView: UIView {
     
+    private var petsTextLabelLeadingToFirstPetConstraint: NSLayoutConstraint!
+    private var petsTextLabelLeadingToSecondPetConstraint: NSLayoutConstraint!
+    private var petsTextLabelLeadingToContainerConstraint: NSLayoutConstraint!
+    
     private let containerView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
@@ -62,6 +66,7 @@ final class ReminderFocusCardView: UIView {
         let label = UILabel()
         label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = .onboardingGray
+        label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -139,17 +144,42 @@ final class ReminderFocusCardView: UIView {
             secondPetImageView.heightAnchor.constraint(equalToConstant: 40),
             
             petsTextLabel.centerYAnchor.constraint(equalTo: firstPetImageView.centerYAnchor),
-            petsTextLabel.leadingAnchor.constraint(equalTo: secondPetImageView.trailingAnchor, constant: 14),
             petsTextLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -28)
         ])
+        
+        petsTextLabelLeadingToFirstPetConstraint = petsTextLabel.leadingAnchor.constraint(equalTo: firstPetImageView.trailingAnchor, constant: 10)
+        petsTextLabelLeadingToSecondPetConstraint = petsTextLabel.leadingAnchor.constraint(equalTo: secondPetImageView.trailingAnchor, constant: 14)
+        petsTextLabelLeadingToContainerConstraint = petsTextLabel.leadingAnchor.constraint(equalTo: eyebrowLabel.leadingAnchor)
+        
+        petsTextLabelLeadingToContainerConstraint.isActive = true
     }
     
     func configure(taskCount: Int, petsText: String, pets: [ReminderFocusPet]) {
         titleLabel.text = "\(taskCount) Tasks\nPending"
         petsTextLabel.text = petsText
         
-        configurePetImageView(firstPetImageView, with: pets.first)
-        configurePetImageView(secondPetImageView, with: pets.count > 1 ? pets[1] : nil)
+        let firstPet = pets.indices.contains(0) ? pets[0] : nil
+        let secondPet = pets.indices.contains(1) ? pets[1] : nil
+        
+        configurePetImageView(firstPetImageView, with: firstPet)
+        configurePetImageView(secondPetImageView, with: secondPet)
+        updatePetsTextPosition(firstPet: firstPet, secondPet: secondPet)
+    }
+    
+    private func updatePetsTextPosition(firstPet: ReminderFocusPet?, secondPet: ReminderFocusPet?) {
+        petsTextLabelLeadingToFirstPetConstraint.isActive = false
+        petsTextLabelLeadingToSecondPetConstraint.isActive = false
+        petsTextLabelLeadingToContainerConstraint.isActive = false
+        
+        if secondPet != nil {
+            petsTextLabelLeadingToSecondPetConstraint.isActive = true
+        } else if firstPet != nil {
+            petsTextLabelLeadingToFirstPetConstraint.isActive = true
+        } else {
+            petsTextLabelLeadingToContainerConstraint.isActive = true
+        }
+        
+        layoutIfNeeded()
     }
     
     private func configurePetImageView(_ imageView: UIImageView, with pet: ReminderFocusPet?) {
@@ -163,6 +193,10 @@ final class ReminderFocusCardView: UIView {
         imageView.isHidden = false
         
         if let photoURL = pet.photoURL, let url = URL(string: photoURL) {
+            imageView.cancelImageLoad()
+            imageView.contentMode = .scaleAspectFill
+            imageView.backgroundColor = .white
+            imageView.tintColor = nil
             imageView.setImage(from: url)
         } else {
             imageView.cancelImageLoad()

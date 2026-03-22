@@ -32,14 +32,23 @@ final class AddReminderController: BaseController {
     }
     
     private var petOptions: [ReminderPetItem] = []
-    private let categoryOptions = ["Health", "Shopping", "Hygiene", "General"]
+    
+    private let categoryOptions = [
+        ReminderCategory.vet.title,
+        ReminderCategory.vaccination.title,
+        ReminderCategory.deworming.title,
+        ReminderCategory.medication.title,
+        ReminderCategory.grooming.title,
+        ReminderCategory.shopping.title,
+        ReminderCategory.general.title
+    ]
     
     private let petPicker = UIPickerView()
     private let categoryPicker = UIPickerView()
     private let datePicker = UIDatePicker()
     
     private var selectedPetIndex: Int = 0
-    private var selectedCategory: String = "Health"
+    private var selectedCategory: String = "Vet Visit"
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -601,6 +610,7 @@ final class AddReminderController: BaseController {
     }
     
     @objc private func saveTapped() {
+        print("SAVE TAPPED")
         switch mode {
         case .create:
             viewModel.createReminder(

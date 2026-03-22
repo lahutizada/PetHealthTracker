@@ -457,7 +457,6 @@ final class PetDetailsController: BaseController {
         growthCard.addSubview(growthDescriptionLabel)
         
         contentView.addSubview(healthTitleLabel)
-        contentView.addSubview(healthViewAllButton)
         contentView.addSubview(healthScrollView)
         healthScrollView.addSubview(healthScrollContentView)
         healthScrollContentView.addSubview(healthCardsStackView)
@@ -587,9 +586,7 @@ final class PetDetailsController: BaseController {
             
             healthTitleLabel.topAnchor.constraint(equalTo: growthCard.bottomAnchor, constant: 28),
             healthTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-
-            healthViewAllButton.centerYAnchor.constraint(equalTo: healthTitleLabel.centerYAnchor),
-            healthViewAllButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            healthTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
 
             healthScrollView.topAnchor.constraint(equalTo: healthTitleLabel.bottomAnchor, constant: 16),
             healthScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -607,9 +604,9 @@ final class PetDetailsController: BaseController {
             healthCardsStackView.trailingAnchor.constraint(equalTo: healthScrollContentView.trailingAnchor, constant: -20),
             healthCardsStackView.bottomAnchor.constraint(equalTo: healthScrollContentView.bottomAnchor),
 
-            vaccinationCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
-            dewormingCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
-            activityCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -72),
+            vaccinationCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
+            dewormingCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
+            activityCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
             
             upcomingVisitCard.topAnchor.constraint(equalTo: healthScrollView.bottomAnchor, constant: 24),
             upcomingVisitCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
@@ -1056,31 +1053,10 @@ final class PetDetailsController: BaseController {
             statusText: viewData.activity.statusText
         )
         
-        upcomingVisitCard.isHidden = false
-        
         if let vetVisit = viewData.upcomingVetVisit {
-            upcomingVisitBadge.isHidden = false
-            visitDateCircle.isHidden = false
-            visitTimeBadge.isHidden = false
-            
-            upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
-            upcomingVisitBadge.text = vetVisit.badgeText
-            
-            let parts = vetVisit.dateText.components(separatedBy: " ")
-            visitMonthLabel.text = parts.first ?? "—"
-            visitDayLabel.text = parts.count > 1 ? parts[1] : "—"
-            
-            visitTitleLabel.text = vetVisit.title
-            visitSubtitleLabel.text = vetVisit.clinicName
-            visitTimeBadge.text = "◷ \(vetVisit.timeText)"
+            applyUpcomingVisitFilled(vetVisit)
         } else {
-            upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
-            upcomingVisitBadge.isHidden = true
-            visitDateCircle.isHidden = true
-            visitTimeBadge.isHidden = true
-            
-            visitTitleLabel.text = "No upcoming vet visits"
-            visitSubtitleLabel.text = "Add a reminder with type vet to see your next appointment here."
+            applyUpcomingVisitEmpty()
         }
     }
     
@@ -1109,6 +1085,48 @@ final class PetDetailsController: BaseController {
             card.badgeLabel.textColor = .mainBlue
             card.badgeLabel.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.14)
         }
+    }
+    
+    private func applyUpcomingVisitFilled(_ vetVisit: PetUpcomingVetVisitViewData) {
+        upcomingVisitCard.isHidden = false
+        
+        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+        upcomingVisitBadge.isHidden = false
+        upcomingVisitBadge.text = vetVisit.badgeText
+        
+        visitDateCircle.isHidden = false
+        visitTimeBadge.isHidden = false
+        
+        let parts = vetVisit.dateText.components(separatedBy: " ")
+        visitMonthLabel.text = parts.first ?? "—"
+        visitDayLabel.text = parts.count > 1 ? parts[1] : "—"
+        visitDayLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        
+        visitTitleLabel.text = vetVisit.title
+        visitSubtitleLabel.text = vetVisit.clinicName
+        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.85)
+        visitTimeBadge.text = "◷ \(vetVisit.timeText)"
+    }
+    
+    private func applyUpcomingVisitEmpty() {
+        upcomingVisitCard.isHidden = false
+        
+        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+        upcomingVisitBadge.isHidden = true
+        
+        visitDateCircle.isHidden = false
+        visitTimeBadge.isHidden = true
+        
+        visitMonthLabel.text = "🐾"
+        visitDayLabel.text = "🐾"
+        visitDayLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        
+        visitTitleLabel.text = "No upcoming vet visits"
+        visitTitleLabel.textColor = .white
+        
+        visitSubtitleLabel.text = "Add a vet reminder to keep appointments organized."
+        visitSubtitleLabel.numberOfLines = 0
+        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.78)
     }
     
     // MARK: - Actions

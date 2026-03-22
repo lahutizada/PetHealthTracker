@@ -110,6 +110,8 @@ final class ReminderItemCardView: UIView {
     
     private var collapsedBottomConstraint: NSLayoutConstraint!
     private var expandedBottomConstraint: NSLayoutConstraint!
+    private var editTrailingToExpandConstraint: NSLayoutConstraint!
+    private var editTrailingToCheckConstraint: NSLayoutConstraint!
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -147,7 +149,6 @@ final class ReminderItemCardView: UIView {
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
             editButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            editButton.trailingAnchor.constraint(equalTo: expandButton.leadingAnchor, constant: -12),
             editButton.widthAnchor.constraint(equalToConstant: 22),
             editButton.heightAnchor.constraint(equalToConstant: 22),
             
@@ -192,6 +193,11 @@ final class ReminderItemCardView: UIView {
         expandedBottomConstraint = notesLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -22)
         
         collapsedBottomConstraint.isActive = true
+        
+        editTrailingToExpandConstraint = editButton.trailingAnchor.constraint(equalTo: expandButton.leadingAnchor, constant: -12)
+        editTrailingToCheckConstraint = editButton.trailingAnchor.constraint(equalTo: checkButton.leadingAnchor, constant: -12)
+
+        editTrailingToExpandConstraint.isActive = true
     }
     
     func configure(with item: ReminderItemViewData) {
@@ -204,6 +210,13 @@ final class ReminderItemCardView: UIView {
         
         let hasNotes = !(item.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         expandButton.isHidden = !hasNotes
+        
+        editTrailingToExpandConstraint.isActive = hasNotes
+        editTrailingToCheckConstraint.isActive = !hasNotes
+        
+        if !hasNotes {
+            isExpanded = false
+        }
         
         let checkImageName = item.isCompleted ? "checkmark.circle.fill" : "circle"
         checkButton.setImage(UIImage(systemName: checkImageName), for: .normal)
@@ -219,44 +232,13 @@ final class ReminderItemCardView: UIView {
     }
     
     private func makeMetaText(petName: String, category: ReminderCategory) -> String {
-        let categoryText: String
-        
-        switch category {
-        case .health:
-            categoryText = "Health"
-        case .shopping:
-            categoryText = "Shopping"
-        case .hygiene:
-            categoryText = "Hygiene"
-        case .general:
-            categoryText = "General"
-        }
-        
-        return "\(petName) • \(categoryText)"
+        "\(petName) • \(category.title)"
     }
     
     private func applyCategoryStyle(_ category: ReminderCategory) {
-        switch category {
-        case .health:
-            categoryIconWrap.backgroundColor = UIColor.systemRed.withAlphaComponent(0.10)
-            categoryIconView.image = UIImage(systemName: "heart.text.square.fill")
-            categoryIconView.tintColor = .systemRed
-            
-        case .shopping:
-            categoryIconWrap.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.10)
-            categoryIconView.image = UIImage(systemName: "bag.fill")
-            categoryIconView.tintColor = .systemOrange
-            
-        case .hygiene:
-            categoryIconWrap.backgroundColor = UIColor.systemPurple.withAlphaComponent(0.10)
-            categoryIconView.image = UIImage(systemName: "scissors")
-            categoryIconView.tintColor = .systemPurple
-            
-        case .general:
-            categoryIconWrap.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.10)
-            categoryIconView.image = UIImage(systemName: "bell.fill")
-            categoryIconView.tintColor = .mainBlue
-        }
+        categoryIconWrap.backgroundColor = category.color.withAlphaComponent(0.10)
+        categoryIconView.image = UIImage(systemName: category.icon)
+        categoryIconView.tintColor = category.color
     }
     
     private func applyDateStyle(_ status: ReminderStatus) {
@@ -280,16 +262,18 @@ final class ReminderItemCardView: UIView {
     
     private func updateExpandedState(animated: Bool) {
         let hasNotes = !(currentItem?.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let shouldExpand = isExpanded && hasNotes
         
-        notesLabel.isHidden = !isExpanded || !hasNotes
-        collapsedBottomConstraint.isActive = !isExpanded || !hasNotes
-        expandedBottomConstraint.isActive = isExpanded && hasNotes
+        notesLabel.isHidden = !shouldExpand
         
-        let imageName = isExpanded ? "chevron.up" : "chevron.down"
+        collapsedBottomConstraint.isActive = !shouldExpand
+        expandedBottomConstraint.isActive = shouldExpand
+        
+        let imageName = shouldExpand ? "chevron.up" : "chevron.down"
         expandButton.setImage(UIImage(systemName: imageName), for: .normal)
         
         if animated {
-            UIView.performWithoutAnimation {
+            UIView.animate(withDuration: 0.25) {
                 self.superview?.layoutIfNeeded()
                 self.layoutIfNeeded()
             }

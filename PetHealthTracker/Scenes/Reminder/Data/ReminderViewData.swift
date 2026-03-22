@@ -13,13 +13,66 @@ enum ReminderStatus {
     case completed
 }
 
-enum ReminderCategory {
-    case health
-    case shopping
-    case hygiene
-    case general
-}
+import UIKit
 
+enum ReminderCategory: String, CaseIterable {
+    
+    case vet = "VET"
+    case vaccination = "VACCINATION"
+    case deworming = "DEWORMING"
+    case medication = "MEDICATION"
+    case grooming = "GROOMING"
+    case shopping = "SHOPPING"
+    case general = "GENERAL"
+    
+    // MARK: - Title
+    
+    var title: String {
+        switch self {
+        case .vet: return "Vet Visit"
+        case .vaccination: return "Vaccination"
+        case .deworming: return "Deworming"
+        case .medication: return "Medication"
+        case .grooming: return "Grooming"
+        case .shopping: return "Shopping"
+        case .general: return "General"
+        }
+    }
+    
+    // MARK: - Icon
+    
+    var icon: String {
+        switch self {
+        case .vet: return "stethoscope"
+        case .vaccination: return "cross.vial.fill"
+        case .deworming: return "pills.fill"
+        case .medication: return "pills"
+        case .grooming: return "scissors"
+        case .shopping: return "cart"
+        case .general: return "bell"
+        }
+    }
+    
+    // MARK: - Color
+    
+    var color: UIColor {
+        switch self {
+        case .vet: return .systemBlue
+        case .vaccination: return .systemGreen
+        case .deworming: return .systemPurple
+        case .medication: return .systemOrange
+        case .grooming: return .systemPink
+        case .shopping: return .systemTeal
+        case .general: return .systemGray
+        }
+    }
+    
+    // MARK: - Init from backend
+    
+    init(from string: String?) {
+        self = ReminderCategory(rawValue: string ?? "") ?? .general
+    }
+}
 struct ReminderItemViewData {
     let id: String
     let title: String

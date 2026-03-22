@@ -121,11 +121,16 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         
+        let categoryValue = ReminderCategory
+            .allCases
+            .first(where: { $0.title == cleanCategory })?
+            .rawValue ?? ReminderCategory.general.rawValue
+
         let request = CreateReminderRequest(
             title: cleanTitle,
             notes: cleanNotes?.isEmpty == true ? nil : cleanNotes,
             dueDate: formatter.string(from: dueDate),
-            type: cleanCategory.lowercased(),
+            type: categoryValue,
             petId: petId
         )
         
@@ -172,11 +177,16 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         
+        let categoryValue = ReminderCategory
+            .allCases
+            .first(where: { $0.title == category })?
+            .rawValue ?? ReminderCategory.general.rawValue
+
         let request = UpdateReminderRequest(
             title: cleanTitle,
             notes: cleanNotes?.isEmpty == true ? nil : cleanNotes,
             dueDate: formatter.string(from: dueDate),
-            type: category.lowercased(),
+            type: categoryValue,
             completed: nil,
             petId: petItems[selectedPetIndex].id
         )
