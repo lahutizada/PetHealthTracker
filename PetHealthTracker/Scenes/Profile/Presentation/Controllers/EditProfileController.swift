@@ -55,7 +55,7 @@ final class EditProfileController: BaseController {
     private lazy var headerLabel: UILabel = {
         let label = UILabel()
         label.text = "Edit Profile"
-        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.translatesAutoresizingMaskIntoConstraints = false
         return label

@@ -68,7 +68,7 @@ final class AddReminderController: BaseController {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Add Reminder"
-        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.translatesAutoresizingMaskIntoConstraints = false
         return label

@@ -51,7 +51,7 @@ final class PetDetailsController: BaseController {
     private lazy var screenTitleLabel: UILabel = {
         let label = UILabel()
         label.text = "Pet Profile"
-        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false

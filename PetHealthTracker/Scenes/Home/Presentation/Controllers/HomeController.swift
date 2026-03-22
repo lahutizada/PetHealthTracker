@@ -38,7 +38,7 @@ final class HomeController: BaseController {
     private lazy var greetingLabel: UILabel = {
         let label = UILabel()
         label.text = "Hello 👋"
-        label.font = .systemFont(ofSize: 30, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -169,6 +169,8 @@ final class HomeController: BaseController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        navigationItem.hidesBackButton = true
         viewModel.loadHome()
     }
     

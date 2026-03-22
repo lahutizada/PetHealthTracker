@@ -13,6 +13,8 @@ final class AnalyticsController: BaseController {
         super.viewDidLoad()
     }
     
+    
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         navigationItem.title = "Analytics"

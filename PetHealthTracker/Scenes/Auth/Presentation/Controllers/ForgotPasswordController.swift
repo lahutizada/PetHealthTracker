@@ -85,7 +85,7 @@ final class ForgotPasswordController: BaseController {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Forgot Password?"
-        label.font = .systemFont(ofSize: 30, weight: .heavy)
+        label.font = .systemFont(ofSize: 28, weight: .heavy)
         label.textColor = .onboardingBlack
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
