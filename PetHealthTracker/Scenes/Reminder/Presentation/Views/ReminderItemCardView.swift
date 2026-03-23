@@ -28,6 +28,21 @@ final class ReminderItemCardView: UIView {
         return view
     }()
     
+    private let deleteBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemRed
+        view.layer.cornerRadius = 22
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private let deleteIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "trash.fill"))
+        imageView.tintColor = .white
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 20, weight: .bold)
@@ -102,22 +117,25 @@ final class ReminderItemCardView: UIView {
         return button
     }()
     
-    private lazy var swipeDeleteGesture: UISwipeGestureRecognizer = {
-        let gesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeDelete))
-        gesture.direction = .left
-        return gesture
+    private lazy var panGesture: UIPanGestureRecognizer = {
+        UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
     }()
+    
+    private var containerLeadingConstraint: NSLayoutConstraint!
+    private var containerTrailingConstraint: NSLayoutConstraint!
     
     private var collapsedBottomConstraint: NSLayoutConstraint!
     private var expandedBottomConstraint: NSLayoutConstraint!
     private var editTrailingToExpandConstraint: NSLayoutConstraint!
     private var editTrailingToCheckConstraint: NSLayoutConstraint!
     
+    private let deleteTriggerOffset: CGFloat = 100
+    private let maxSwipeOffset: CGFloat = 120
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
         setupConstraints()
-        addGestureRecognizer(swipeDeleteGesture)
     }
     
     required init?(coder: NSCoder) {
@@ -126,7 +144,12 @@ final class ReminderItemCardView: UIView {
     
     private func setupUI() {
         backgroundColor = .clear
+        
+        addSubview(deleteBackgroundView)
+        deleteBackgroundView.addSubview(deleteIconView)
         addSubview(containerView)
+        
+        addGestureRecognizer(panGesture)
         
         containerView.addSubview(titleLabel)
         containerView.addSubview(dateLabel)
@@ -143,9 +166,17 @@ final class ReminderItemCardView: UIView {
     
     private func setupConstraints() {
         NSLayoutConstraint.activate([
+            deleteBackgroundView.topAnchor.constraint(equalTo: topAnchor),
+            deleteBackgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            deleteBackgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            deleteBackgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            deleteIconView.centerYAnchor.constraint(equalTo: deleteBackgroundView.centerYAnchor),
+            deleteIconView.trailingAnchor.constraint(equalTo: deleteBackgroundView.trailingAnchor, constant: -28),
+            deleteIconView.widthAnchor.constraint(equalToConstant: 22),
+            deleteIconView.heightAnchor.constraint(equalToConstant: 22),
+            
             containerView.topAnchor.constraint(equalTo: topAnchor),
-            containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
             editButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
@@ -189,14 +220,17 @@ final class ReminderItemCardView: UIView {
             categoryIconView.heightAnchor.constraint(equalToConstant: 20)
         ])
         
+        containerLeadingConstraint = containerView.leadingAnchor.constraint(equalTo: leadingAnchor)
+        containerTrailingConstraint = containerView.trailingAnchor.constraint(equalTo: trailingAnchor)
+        containerLeadingConstraint.isActive = true
+        containerTrailingConstraint.isActive = true
+        
         collapsedBottomConstraint = metaLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -28)
         expandedBottomConstraint = notesLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -22)
-        
         collapsedBottomConstraint.isActive = true
         
         editTrailingToExpandConstraint = editButton.trailingAnchor.constraint(equalTo: expandButton.leadingAnchor, constant: -12)
         editTrailingToCheckConstraint = editButton.trailingAnchor.constraint(equalTo: checkButton.leadingAnchor, constant: -12)
-
         editTrailingToExpandConstraint.isActive = true
     }
     
@@ -229,6 +263,7 @@ final class ReminderItemCardView: UIView {
         applyDateStyle(item.status)
         applyCompletedStyle(item.isCompleted)
         updateExpandedState(animated: false)
+        resetSwipePosition(animated: false)
     }
     
     private func makeMetaText(petName: String, category: ReminderCategory) -> String {
@@ -260,7 +295,7 @@ final class ReminderItemCardView: UIView {
         notesLabel.alpha = isCompleted ? 0.75 : 1.0
     }
     
-    private func updateExpandedState(animated: Bool) {
+    private func updateExpandedState(animated: Bool = false) {
         let hasNotes = !(currentItem?.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         let shouldExpand = isExpanded && hasNotes
         
@@ -272,12 +307,8 @@ final class ReminderItemCardView: UIView {
         let imageName = shouldExpand ? "chevron.up" : "chevron.down"
         expandButton.setImage(UIImage(systemName: imageName), for: .normal)
         
-        if animated {
-            UIView.animate(withDuration: 0.25) {
-                self.superview?.layoutIfNeeded()
-                self.layoutIfNeeded()
-            }
-        } else {
+        UIView.performWithoutAnimation {
+            self.superview?.superview?.layoutIfNeeded()
             self.superview?.layoutIfNeeded()
             self.layoutIfNeeded()
         }
@@ -296,14 +327,64 @@ final class ReminderItemCardView: UIView {
     
     @objc private func toggleExpandedTapped() {
         isExpanded.toggle()
-        updateExpandedState(animated: true)
+        updateExpandedState(animated: false)
     }
     
     @objc private func editTapped() {
         onEditTapped?()
     }
     
-    @objc private func handleSwipeDelete() {
-        onDeleteTapped?()
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: self)
+        
+        switch gesture.state {
+        case .changed:
+            let offset = max(-maxSwipeOffset, min(0, translation.x))
+            updateSwipeOffset(offset, animated: false)
+            
+        case .ended, .cancelled:
+            let shouldDelete = translation.x <= -deleteTriggerOffset
+            
+            if shouldDelete {
+                UIView.animate(withDuration: 0.18, animations: {
+                    self.updateSwipeOffset(-self.maxSwipeOffset, animated: false)
+                    self.layoutIfNeeded()
+                }) { _ in
+                    self.onDeleteTapped?()
+                    self.resetSwipePosition(animated: true)
+                }
+            } else {
+                resetSwipePosition(animated: true)
+            }
+            
+        default:
+            break
+        }
+    }
+    
+    private func updateSwipeOffset(_ offset: CGFloat, animated: Bool) {
+        containerLeadingConstraint.constant = offset
+        containerTrailingConstraint.constant = offset
+        
+        if animated {
+            UIView.animate(withDuration: 0.2) {
+                self.layoutIfNeeded()
+            }
+        } else {
+            layoutIfNeeded()
+        }
+    }
+    
+    private func resetSwipePosition(animated: Bool) {
+        containerLeadingConstraint.constant = 0
+        containerTrailingConstraint.constant = 0
+        
+        if animated {
+            UIView.animate(withDuration: 0.22) {
+                self.layoutIfNeeded()
+            }
+        } else {
+            layoutIfNeeded()
+        }
     }
 }

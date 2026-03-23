@@ -15,6 +15,7 @@ final class AddReminderController: BaseController {
     }
     
     var onReminderSaved: (() -> Void)?
+    
     private let mode: Mode
     private let viewModel: AddReminderViewModelProtocol
     
@@ -48,7 +49,7 @@ final class AddReminderController: BaseController {
     private let datePicker = UIDatePicker()
     
     private var selectedPetIndex: Int = 0
-    private var selectedCategory: String = "Vet Visit"
+    private var selectedCategory: String = ReminderCategory.vet.title
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -117,7 +118,7 @@ final class AddReminderController: BaseController {
     
     private lazy var heroSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Set reminders for health, shopping, grooming and more."
+        label.text = "Set reminders for vet visits, vaccines, deworming and more."
         label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = .onboardingGray
         label.numberOfLines = 0
@@ -144,7 +145,7 @@ final class AddReminderController: BaseController {
     private lazy var notesFieldLabel = makeFieldLabel("Notes")
     
     private lazy var titleTextField: UITextField = {
-        let tf = makeTextField("e.g. Vet Checkup")
+        let tf = makeTextField("e.g. Royal Vet")
         tf.addTarget(self, action: #selector(clearError), for: .editingChanged)
         return tf
     }()
@@ -219,10 +220,10 @@ final class AddReminderController: BaseController {
         configurePickers()
         configureDatePicker()
         configureToolbars()
-        updateDateText()
         observeKeyboard()
-        viewModel.loadPets()
         applyModeIfNeeded()
+        updateDateText()
+        viewModel.loadPets()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -461,8 +462,9 @@ final class AddReminderController: BaseController {
         case .create:
             titleLabel.text = "Add Reminder"
             heroTitleLabel.text = "Create a new task"
-            heroSubtitleLabel.text = "Set reminders for health, shopping, grooming and more."
+            heroSubtitleLabel.text = "Set reminders for vet visits, vaccines, deworming and more."
             saveButton.setTitle("Save Reminder", for: .normal)
+            categoryTextField.text = selectedCategory
             
         case .edit(let item):
             titleLabel.text = "Edit Reminder"
@@ -486,11 +488,13 @@ final class AddReminderController: BaseController {
                 }
             }
             
-            if let type = item.type,
-               let categoryIndex = categoryOptions.firstIndex(where: { $0.lowercased() == type.lowercased() }) {
-                selectedCategory = categoryOptions[categoryIndex]
-                categoryTextField.text = selectedCategory
-                categoryPicker.selectRow(categoryIndex, inComponent: 0, animated: false)
+            if let type = item.type {
+                let category = ReminderCategory(from: type)
+                if let categoryIndex = categoryOptions.firstIndex(of: category.title) {
+                    selectedCategory = category.title
+                    categoryTextField.text = selectedCategory
+                    categoryPicker.selectRow(categoryIndex, inComponent: 0, animated: false)
+                }
             }
         }
     }
@@ -598,8 +602,10 @@ final class AddReminderController: BaseController {
         
         if categoryTextField.isFirstResponder {
             let row = categoryPicker.selectedRow(inComponent: 0)
-            selectedCategory = categoryOptions[row]
-            categoryTextField.text = selectedCategory
+            if categoryOptions.indices.contains(row) {
+                selectedCategory = categoryOptions[row]
+                categoryTextField.text = selectedCategory
+            }
         }
         
         if dateTextField.isFirstResponder {
@@ -610,7 +616,6 @@ final class AddReminderController: BaseController {
     }
     
     @objc private func saveTapped() {
-        print("SAVE TAPPED")
         switch mode {
         case .create:
             viewModel.createReminder(

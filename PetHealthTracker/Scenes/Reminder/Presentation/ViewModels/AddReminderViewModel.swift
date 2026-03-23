@@ -19,6 +19,7 @@ protocol AddReminderViewModelProtocol: AnyObject {
     var onError: ((String?) -> Void)? { get set }
     
     func loadPets()
+    
     func createReminder(
         title: String?,
         notes: String?,
@@ -111,12 +112,12 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
             return
         }
         
-        let petId: String?
-        if petItems.indices.contains(selectedPetIndex) {
-            petId = petItems[selectedPetIndex].id
-        } else {
-            petId = nil
+        guard petItems.indices.contains(selectedPetIndex) else {
+            onError?("Please select a pet")
+            return
         }
+        
+        let petId = petItems[selectedPetIndex].id
         
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
@@ -125,7 +126,7 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
             .allCases
             .first(where: { $0.title == cleanCategory })?
             .rawValue ?? ReminderCategory.general.rawValue
-
+        
         let request = CreateReminderRequest(
             title: cleanTitle,
             notes: cleanNotes?.isEmpty == true ? nil : cleanNotes,
@@ -161,6 +162,8 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
         category: String,
         selectedPetIndex: Int
     ) {
+        clearError()
+        
         guard petItems.indices.contains(selectedPetIndex) else {
             onError?("Please select a pet")
             return
@@ -181,10 +184,10 @@ final class AddReminderViewModel: AddReminderViewModelProtocol {
             .allCases
             .first(where: { $0.title == category })?
             .rawValue ?? ReminderCategory.general.rawValue
-
+        
         let request = UpdateReminderRequest(
             title: cleanTitle,
-            notes: cleanNotes?.isEmpty == true ? nil : cleanNotes,
+            notes: cleanNotes ?? "",
             dueDate: formatter.string(from: dueDate),
             type: categoryValue,
             completed: nil,
