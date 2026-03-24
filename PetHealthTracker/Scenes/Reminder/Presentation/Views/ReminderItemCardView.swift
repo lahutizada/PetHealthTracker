@@ -13,10 +13,16 @@ final class ReminderItemCardView: UIView {
     var onDeleteTapped: (() -> Void)?
     var onEditTapped: (() -> Void)?
     
+    private var isSwipedOpen = false
+    private let openOffset: CGFloat = 88
+    
     private var isExpanded = false
     private var currentItem: ReminderItemViewData?
     
-    private let containerView: UIView = {
+    private let deleteTriggerOffset: CGFloat = 100
+    private let maxSwipeOffset: CGFloat = 120
+    
+    private lazy var containerView: UIView = {
         let view = UIView()
         view.backgroundColor = .white
         view.layer.cornerRadius = 22
@@ -28,7 +34,7 @@ final class ReminderItemCardView: UIView {
         return view
     }()
     
-    private let deleteBackgroundView: UIView = {
+    private lazy var deleteBackgroundView: UIView = {
         let view = UIView()
         view.backgroundColor = .systemRed
         view.layer.cornerRadius = 22
@@ -36,14 +42,14 @@ final class ReminderItemCardView: UIView {
         return view
     }()
     
-    private let deleteIconView: UIImageView = {
+    private lazy var deleteIconView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "trash.fill"))
         imageView.tintColor = .white
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
     
-    private let titleLabel: UILabel = {
+    private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 20, weight: .bold)
         label.textColor = .onboardingBlack
@@ -52,7 +58,7 @@ final class ReminderItemCardView: UIView {
         return label
     }()
     
-    private let dateLabel: UILabel = {
+    private lazy var dateLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.numberOfLines = 1
@@ -60,7 +66,7 @@ final class ReminderItemCardView: UIView {
         return label
     }()
     
-    private let metaLabel: UILabel = {
+    private lazy var metaLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = .onboardingGray
@@ -69,7 +75,7 @@ final class ReminderItemCardView: UIView {
         return label
     }()
     
-    private let notesLabel: UILabel = {
+    private lazy var notesLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .onboardingGray
@@ -79,14 +85,14 @@ final class ReminderItemCardView: UIView {
         return label
     }()
     
-    private let categoryIconWrap: UIView = {
+    private lazy var categoryIconWrap: UIView = {
         let view = UIView()
         view.layer.cornerRadius = 22
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
-    private let categoryIconView: UIImageView = {
+    private lazy var categoryIconView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
@@ -118,7 +124,19 @@ final class ReminderItemCardView: UIView {
     }()
     
     private lazy var panGesture: UIPanGestureRecognizer = {
-        UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        gesture.delegate = self
+        gesture.cancelsTouchesInView = false
+        return gesture
+    }()
+    
+    private lazy var tapGesture: UITapGestureRecognizer = {
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(handleCardTap))
+        gesture.cancelsTouchesInView = false
+        gesture.delaysTouchesBegan = false
+        gesture.delaysTouchesEnded = false
+        gesture.delegate = self
+        return gesture
     }()
     
     private var containerLeadingConstraint: NSLayoutConstraint!
@@ -129,20 +147,17 @@ final class ReminderItemCardView: UIView {
     private var editTrailingToExpandConstraint: NSLayoutConstraint!
     private var editTrailingToCheckConstraint: NSLayoutConstraint!
     
-    private let deleteTriggerOffset: CGFloat = 100
-    private let maxSwipeOffset: CGFloat = 120
-    
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setupUI()
-        setupConstraints()
+        configureUI()
+        configureConstraints()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func setupUI() {
+    private func configureUI() {
         backgroundColor = .clear
         
         addSubview(deleteBackgroundView)
@@ -150,21 +165,24 @@ final class ReminderItemCardView: UIView {
         addSubview(containerView)
         
         addGestureRecognizer(panGesture)
+        containerView.addGestureRecognizer(tapGesture)
         
         containerView.addSubview(titleLabel)
         containerView.addSubview(dateLabel)
         containerView.addSubview(metaLabel)
         containerView.addSubview(notesLabel)
-        
         containerView.addSubview(editButton)
         containerView.addSubview(expandButton)
         containerView.addSubview(checkButton)
-        
         containerView.addSubview(categoryIconWrap)
         categoryIconWrap.addSubview(categoryIconView)
+        
+        let deleteTap = UITapGestureRecognizer(target: self, action: #selector(handleDeleteTap))
+        deleteTap.cancelsTouchesInView = false
+        deleteBackgroundView.addGestureRecognizer(deleteTap)
     }
     
-    private func setupConstraints() {
+    private func configureConstraints() {
         NSLayoutConstraint.activate([
             deleteBackgroundView.topAnchor.constraint(equalTo: topAnchor),
             deleteBackgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -239,7 +257,7 @@ final class ReminderItemCardView: UIView {
         
         titleLabel.text = item.title
         dateLabel.text = item.subtitle
-        metaLabel.text = makeMetaText(petName: item.petName, category: item.category)
+        metaLabel.text = "\(item.petName) • \(item.category.title)"
         notesLabel.text = item.notes
         
         let hasNotes = !(item.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
@@ -259,24 +277,21 @@ final class ReminderItemCardView: UIView {
         let expandImageName = isExpanded ? "chevron.up" : "chevron.down"
         expandButton.setImage(UIImage(systemName: expandImageName), for: .normal)
         
-        applyCategoryStyle(item.category)
-        applyDateStyle(item.status)
-        applyCompletedStyle(item.isCompleted)
-        updateExpandedState(animated: false)
-        resetSwipePosition(animated: false)
+        configureCategoryStyle(item.category)
+        configureDateStyle(item.status)
+        configureCompletedStyle(item.isCompleted)
+        configureExpandedState()
+        configureResetSwipePosition(animated: false)
+        isSwipedOpen = false
     }
     
-    private func makeMetaText(petName: String, category: ReminderCategory) -> String {
-        "\(petName) • \(category.title)"
-    }
-    
-    private func applyCategoryStyle(_ category: ReminderCategory) {
+    private func configureCategoryStyle(_ category: ReminderCategory) {
         categoryIconWrap.backgroundColor = category.color.withAlphaComponent(0.10)
         categoryIconView.image = UIImage(systemName: category.icon)
         categoryIconView.tintColor = category.color
     }
     
-    private func applyDateStyle(_ status: ReminderStatus) {
+    private func configureDateStyle(_ status: ReminderStatus) {
         switch status {
         case .overdue:
             dateLabel.textColor = .systemRed
@@ -287,7 +302,7 @@ final class ReminderItemCardView: UIView {
         }
     }
     
-    private func applyCompletedStyle(_ isCompleted: Bool) {
+    private func configureCompletedStyle(_ isCompleted: Bool) {
         titleLabel.alpha = isCompleted ? 0.7 : 1.0
         dateLabel.alpha = isCompleted ? 0.85 : 1.0
         metaLabel.alpha = isCompleted ? 0.75 : 1.0
@@ -295,12 +310,11 @@ final class ReminderItemCardView: UIView {
         notesLabel.alpha = isCompleted ? 0.75 : 1.0
     }
     
-    private func updateExpandedState(animated: Bool = false) {
+    private func configureExpandedState() {
         let hasNotes = !(currentItem?.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         let shouldExpand = isExpanded && hasNotes
         
         notesLabel.isHidden = !shouldExpand
-        
         collapsedBottomConstraint.isActive = !shouldExpand
         expandedBottomConstraint.isActive = shouldExpand
         
@@ -314,6 +328,49 @@ final class ReminderItemCardView: UIView {
         }
     }
     
+    private func configureSwipeOffset(_ offset: CGFloat, animated: Bool) {
+        containerLeadingConstraint.constant = offset
+        containerTrailingConstraint.constant = offset
+        
+        if animated {
+            UIView.animate(
+                withDuration: 0.25,
+                delay: 0,
+                options: [.curveEaseOut],
+                animations: {
+                    self.layoutIfNeeded()
+                }
+            )
+        } else {
+            layoutIfNeeded()
+        }
+    }
+    
+    private func configureOpenSwipe() {
+        isSwipedOpen = true
+        configureSwipeOffset(-openOffset, animated: true)
+    }
+    
+    private func configureCloseSwipe() {
+        isSwipedOpen = false
+        configureSwipeOffset(0, animated: true)
+    }
+    
+    private func configureResetSwipePosition(animated: Bool) {
+        containerLeadingConstraint.constant = 0
+        containerTrailingConstraint.constant = 0
+        
+        if animated {
+            UIView.animate(withDuration: 0.22) {
+                self.layoutIfNeeded()
+            }
+        } else {
+            layoutIfNeeded()
+        }
+    }
+    
+    // MARK: - Actions
+    
     @objc private func toggleCompletedTapped() {
         UIView.animate(withDuration: 0.18, animations: {
             self.transform = CGAffineTransform(scaleX: 0.985, y: 0.985)
@@ -322,12 +379,13 @@ final class ReminderItemCardView: UIView {
                 self.transform = .identity
             }
         }
+        
         onToggleCompleted?()
     }
     
     @objc private func toggleExpandedTapped() {
         isExpanded.toggle()
-        updateExpandedState(animated: false)
+        configureExpandedState()
     }
     
     @objc private func editTapped() {
@@ -339,22 +397,24 @@ final class ReminderItemCardView: UIView {
         
         switch gesture.state {
         case .changed:
-            let offset = max(-maxSwipeOffset, min(0, translation.x))
-            updateSwipeOffset(offset, animated: false)
+            let offset = max(-openOffset, min(0, translation.x + (isSwipedOpen ? -openOffset : 0)))
+            configureSwipeOffset(offset, animated: false)
             
         case .ended, .cancelled:
-            let shouldDelete = translation.x <= -deleteTriggerOffset
+            let velocity = gesture.velocity(in: self).x
             
-            if shouldDelete {
-                UIView.animate(withDuration: 0.18, animations: {
-                    self.updateSwipeOffset(-self.maxSwipeOffset, animated: false)
-                    self.layoutIfNeeded()
-                }) { _ in
-                    self.onDeleteTapped?()
-                    self.resetSwipePosition(animated: true)
+            if isSwipedOpen {
+                if translation.x > 30 || velocity > 300 {
+                    configureCloseSwipe()
+                } else {
+                    configureOpenSwipe()
                 }
             } else {
-                resetSwipePosition(animated: true)
+                if translation.x < -40 || velocity < -300 {
+                    configureOpenSwipe()
+                } else {
+                    configureCloseSwipe()
+                }
             }
             
         default:
@@ -362,29 +422,60 @@ final class ReminderItemCardView: UIView {
         }
     }
     
-    private func updateSwipeOffset(_ offset: CGFloat, animated: Bool) {
-        containerLeadingConstraint.constant = offset
-        containerTrailingConstraint.constant = offset
+    @objc private func handleCardTap() {
+        if isSwipedOpen {
+            configureCloseSwipe()
+            return
+        }
         
-        if animated {
-            UIView.animate(withDuration: 0.2) {
-                self.layoutIfNeeded()
-            }
-        } else {
-            layoutIfNeeded()
+        let hasNotes = !(currentItem?.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        guard hasNotes else { return }
+        
+        isExpanded.toggle()
+        
+        UIView.animate(withDuration: 0.2) {
+            self.configureExpandedState()
+            self.superview?.layoutIfNeeded()
+            self.layoutIfNeeded()
         }
     }
     
-    private func resetSwipePosition(animated: Bool) {
-        containerLeadingConstraint.constant = 0
-        containerTrailingConstraint.constant = 0
-        
-        if animated {
-            UIView.animate(withDuration: 0.22) {
-                self.layoutIfNeeded()
-            }
-        } else {
-            layoutIfNeeded()
+    @objc private func handleDeleteTap() {
+        onDeleteTapped?()
+    }
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === panGesture,
+           let panGesture = gestureRecognizer as? UIPanGestureRecognizer {
+            let velocity = panGesture.velocity(in: self)
+            return abs(velocity.x) > abs(velocity.y)
         }
+        
+        return true
+    }
+}
+
+extension ReminderItemCardView: UIGestureRecognizerDelegate {
+    
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        if gestureRecognizer is UITapGestureRecognizer {
+            return true
+        }
+        
+        return false
+    }
+    
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldReceive touch: UITouch
+    ) -> Bool {
+        if touch.view is UIButton {
+            return false
+        }
+        
+        return true
     }
 }

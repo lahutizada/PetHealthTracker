@@ -32,6 +32,17 @@ final class DewormingService: DewormingServicing {
         )
     }
     
+    func updateDeworming(id: String, requestModel: UpdateDewormingRequest) async throws -> DewormingRecordResponse {
+        let body = try JSONEncoder().encode(requestModel)
+        
+        return try await APIClient.shared.request(
+            endpoint: "/deworming/\(id)",
+            method: "PATCH",
+            body: body,
+            requiresAuth: true
+        )
+    }
+    
     func deleteDeworming(id: String) async throws {
         let _: DeleteResponse = try await APIClient.shared.request(
             endpoint: "/deworming/\(id)",

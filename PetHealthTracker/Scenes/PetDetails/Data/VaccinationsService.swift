@@ -32,6 +32,17 @@ final class VaccinationsService: VaccinationsServicing {
         )
     }
     
+    func updateVaccination(id: String, requestModel: UpdateVaccinationRequest) async throws -> VaccinationRecordResponse {
+        let body = try JSONEncoder().encode(requestModel)
+        
+        return try await APIClient.shared.request(
+            endpoint: "/vaccinations/\(id)",
+            method: "PATCH",
+            body: body,
+            requiresAuth: true
+        )
+    }
+    
     func deleteVaccination(id: String) async throws {
         let _: DeleteResponse = try await APIClient.shared.request(
             endpoint: "/vaccinations/\(id)",

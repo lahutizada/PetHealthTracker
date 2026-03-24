@@ -11,6 +11,7 @@ final class EditProfileController: BaseController {
     
     private let currentUser: UserResponse
     private let viewModel: EditProfileViewModelProtocol
+    
     var onProfileUpdated: ((UserResponse) -> Void)?
     
     init(
@@ -44,10 +45,7 @@ final class EditProfileController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -57,6 +55,7 @@ final class EditProfileController: BaseController {
         label.text = "Edit Profile"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
+        label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -69,7 +68,7 @@ final class EditProfileController: BaseController {
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
-
+    
     private lazy var avatarImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
@@ -78,7 +77,7 @@ final class EditProfileController: BaseController {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
-
+    
     private lazy var avatarLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 28, weight: .bold)
@@ -148,7 +147,6 @@ final class EditProfileController: BaseController {
         textField.layer.borderWidth = 1
         textField.layer.borderColor = UIColor.systemGray5.cgColor
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.heightAnchor.constraint(equalToConstant: 56).isActive = true
         textField.setLeftPadding(18)
         textField.addTarget(self, action: #selector(clearStatus), for: .editingChanged)
         return textField
@@ -199,7 +197,10 @@ final class EditProfileController: BaseController {
         return label
     }()
     
-    private lazy var statusView = StatusMessageView()
+    private lazy var statusView: StatusMessageView = {
+        let view = StatusMessageView()
+        return view
+    }()
     
     private lazy var saveButton: UIButton = {
         let button = UIButton(type: .system)
@@ -209,7 +210,6 @@ final class EditProfileController: BaseController {
         button.backgroundColor = .mainBlue
         button.layer.cornerRadius = 18
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 58).isActive = true
         button.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         return button
     }()
@@ -219,7 +219,7 @@ final class EditProfileController: BaseController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureAvatar()
-        observeKeyboard()
+        configureObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -233,7 +233,7 @@ final class EditProfileController: BaseController {
         scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
     
-    // MARK: - BaseController
+    // MARK: - Configure
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -241,27 +241,35 @@ final class EditProfileController: BaseController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
-        contentView.addSubview(backButton)
-        contentView.addSubview(headerLabel)
+        [
+            backButton,
+            headerLabel,
+            avatarContainer,
+            avatarTitleLabel,
+            avatarSubtitleLabel,
+            infoCard,
+            statusView,
+            saveButton
+        ].forEach(contentView.addSubview)
         
-        contentView.addSubview(avatarContainer)
-        avatarContainer.addSubview(avatarImageView)
-        avatarContainer.addSubview(avatarLabel)
-        contentView.addSubview(avatarTitleLabel)
-        contentView.addSubview(avatarSubtitleLabel)
+        [
+            avatarImageView,
+            avatarLabel
+        ].forEach(avatarContainer.addSubview)
         
-        contentView.addSubview(infoCard)
-        infoCard.addSubview(sectionTitleLabel)
-        infoCard.addSubview(nameLabel)
-        infoCard.addSubview(nameTextField)
-        infoCard.addSubview(emailLabel)
-        infoCard.addSubview(emailContainer)
-        emailContainer.addSubview(emailIconView)
-        emailContainer.addSubview(emailValueLabel)
-        infoCard.addSubview(emailHintLabel)
+        [
+            sectionTitleLabel,
+            nameLabel,
+            nameTextField,
+            emailLabel,
+            emailContainer,
+            emailHintLabel
+        ].forEach(infoCard.addSubview)
         
-        contentView.addSubview(statusView)
-        contentView.addSubview(saveButton)
+        [
+            emailIconView,
+            emailValueLabel
+        ].forEach(emailContainer.addSubview)
     }
     
     override func configureConstraints() {
@@ -279,11 +287,11 @@ final class EditProfileController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 28),
-            backButton.heightAnchor.constraint(equalToConstant: 28),
             
             headerLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             headerLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            headerLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 12),
+            headerLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -20),
             
             avatarContainer.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 28),
             avatarContainer.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
@@ -294,7 +302,7 @@ final class EditProfileController: BaseController {
             avatarImageView.leadingAnchor.constraint(equalTo: avatarContainer.leadingAnchor),
             avatarImageView.trailingAnchor.constraint(equalTo: avatarContainer.trailingAnchor),
             avatarImageView.bottomAnchor.constraint(equalTo: avatarContainer.bottomAnchor),
-
+            
             avatarLabel.centerXAnchor.constraint(equalTo: avatarContainer.centerXAnchor),
             avatarLabel.centerYAnchor.constraint(equalTo: avatarContainer.centerYAnchor),
             
@@ -321,6 +329,7 @@ final class EditProfileController: BaseController {
             nameTextField.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 10),
             nameTextField.leadingAnchor.constraint(equalTo: sectionTitleLabel.leadingAnchor),
             nameTextField.trailingAnchor.constraint(equalTo: sectionTitleLabel.trailingAnchor),
+            nameTextField.heightAnchor.constraint(equalToConstant: 56),
             
             emailLabel.topAnchor.constraint(equalTo: nameTextField.bottomAnchor, constant: 20),
             emailLabel.leadingAnchor.constraint(equalTo: sectionTitleLabel.leadingAnchor),
@@ -352,6 +361,7 @@ final class EditProfileController: BaseController {
             saveButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 16),
             saveButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            saveButton.heightAnchor.constraint(equalToConstant: 58),
             saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -32)
         ])
     }
@@ -387,7 +397,7 @@ final class EditProfileController: BaseController {
             guard let self else { return }
             
             self.avatarTitleLabel.text = updatedUser.name ?? "User"
-            self.avatarLabel.text = self.profileInitials(from: updatedUser.name)
+            self.avatarLabel.text = self.configureProfileInitials(from: updatedUser.name)
             self.onProfileUpdated?(updatedUser)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
@@ -400,23 +410,19 @@ final class EditProfileController: BaseController {
     private func configureAvatar() {
         if let avatarUrl = currentUser.avatarUrl,
            let url = URL(string: avatarUrl) {
-            
             avatarContainer.backgroundColor = .white
             avatarImageView.isHidden = false
             avatarLabel.isHidden = true
             avatarImageView.setImage(from: url)
-            
         } else {
             avatarContainer.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.10)
             avatarImageView.isHidden = true
             avatarLabel.isHidden = false
-            avatarLabel.text = profileInitials(from: currentUser.name)
+            avatarLabel.text = configureProfileInitials(from: currentUser.name)
         }
     }
     
-    // MARK: - Helpers
-    
-    private func profileInitials(from name: String?) -> String {
+    private func configureProfileInitials(from name: String?) -> String {
         guard let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return "U"
         }
@@ -429,7 +435,7 @@ final class EditProfileController: BaseController {
         return parts.isEmpty ? "U" : parts.joined()
     }
     
-    private func observeKeyboard() {
+    private func configureObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardWillShow),

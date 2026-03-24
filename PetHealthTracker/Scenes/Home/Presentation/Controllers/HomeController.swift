@@ -58,10 +58,18 @@ final class HomeController: BaseController {
         let view = PetCardContentView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.isUserInteractionEnabled = true
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(openPetDetails))
+        view.addGestureRecognizer(tap)
+        
+        view.onActionTapped = { [weak self] in
+            self?.configureOpenAddPet()
+        }
+        
         return view
     }()
     
-    private lazy var quickActionsTitle: UILabel = {
+    private lazy var quickActionsTitleLabel: UILabel = {
         let label = UILabel()
         label.text = "Quick Actions"
         label.font = .systemFont(ofSize: 20, weight: .bold)
@@ -70,11 +78,161 @@ final class HomeController: BaseController {
         return label
     }()
     
+    private lazy var addPetIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "pawprint.fill"))
+        imageView.tintColor = .mainBlue
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = false
+        return imageView
+    }()
+    
+    private lazy var addPetButtonTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Add Pet"
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isUserInteractionEnabled = false
+        return label
+    }()
+    
+    private lazy var addPetButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .white
+        button.layer.cornerRadius = 20
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.04
+        button.layer.shadowRadius = 10
+        button.layer.shadowOffset = CGSize(width: 0, height: 4)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(addPetTapped), for: .touchUpInside)
+        
+        button.addSubview(addPetIconView)
+        button.addSubview(addPetButtonTitleLabel)
+        
+        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(equalToConstant: 92),
+            
+            addPetIconView.topAnchor.constraint(equalTo: button.topAnchor, constant: 16),
+            addPetIconView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            addPetIconView.widthAnchor.constraint(equalToConstant: 22),
+            addPetIconView.heightAnchor.constraint(equalToConstant: 22),
+            
+            addPetButtonTitleLabel.topAnchor.constraint(equalTo: addPetIconView.bottomAnchor, constant: 10),
+            addPetButtonTitleLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
+            addPetButtonTitleLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8)
+        ])
+        
+        return button
+    }()
+    
+    private lazy var remindersIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "bell.fill"))
+        imageView.tintColor = .mainBlue
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = false
+        return imageView
+    }()
+    
+    private lazy var remindersButtonTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Reminders"
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isUserInteractionEnabled = false
+        return label
+    }()
+    
+    private lazy var remindersButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .white
+        button.layer.cornerRadius = 20
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.04
+        button.layer.shadowRadius = 10
+        button.layer.shadowOffset = CGSize(width: 0, height: 4)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(addReminderTapped), for: .touchUpInside)
+        
+        button.addSubview(remindersIconView)
+        button.addSubview(remindersButtonTitleLabel)
+        
+        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(equalToConstant: 92),
+            
+            remindersIconView.topAnchor.constraint(equalTo: button.topAnchor, constant: 16),
+            remindersIconView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            remindersIconView.widthAnchor.constraint(equalToConstant: 22),
+            remindersIconView.heightAnchor.constraint(equalToConstant: 22),
+            
+            remindersButtonTitleLabel.topAnchor.constraint(equalTo: remindersIconView.bottomAnchor, constant: 10),
+            remindersButtonTitleLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
+            remindersButtonTitleLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8)
+        ])
+        
+        return button
+    }()
+    
+    private lazy var healthLogIconView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "heart.text.square.fill"))
+        imageView.tintColor = .mainBlue
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = false
+        return imageView
+    }()
+    
+    private lazy var healthLogButtonTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Health Log"
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isUserInteractionEnabled = false
+        return label
+    }()
+    
+    private lazy var healthLogButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .white
+        button.layer.cornerRadius = 20
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.04
+        button.layer.shadowRadius = 10
+        button.layer.shadowOffset = CGSize(width: 0, height: 4)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(addHealthLogTapped), for: .touchUpInside)
+        
+        button.addSubview(healthLogIconView)
+        button.addSubview(healthLogButtonTitleLabel)
+        
+        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(equalToConstant: 92),
+            
+            healthLogIconView.topAnchor.constraint(equalTo: button.topAnchor, constant: 16),
+            healthLogIconView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            healthLogIconView.widthAnchor.constraint(equalToConstant: 22),
+            healthLogIconView.heightAnchor.constraint(equalToConstant: 22),
+            
+            healthLogButtonTitleLabel.topAnchor.constraint(equalTo: healthLogIconView.bottomAnchor, constant: 10),
+            healthLogButtonTitleLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
+            healthLogButtonTitleLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8)
+        ])
+        
+        return button
+    }()
+    
     private lazy var actionsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
-            makeActionButton(title: "Add Pet", icon: "pawprint.fill", action: #selector(addPetTapped)),
-            makeActionButton(title: "Reminders", icon: "bell.fill", action: #selector(addReminderTapped)),
-            makeActionButton(title: "Health Log", icon: "heart.text.square.fill", action: #selector(addHealthLogTapped))
+            addPetButton,
+            remindersButton,
+            healthLogButton
         ])
         stack.axis = .horizontal
         stack.spacing = 12
@@ -83,7 +241,7 @@ final class HomeController: BaseController {
         return stack
     }()
     
-    private lazy var remindersTitle: UILabel = {
+    private lazy var remindersTitleLabel: UILabel = {
         let label = UILabel()
         label.text = "Upcoming Reminders"
         label.font = .systemFont(ofSize: 20, weight: .bold)
@@ -92,17 +250,23 @@ final class HomeController: BaseController {
         return label
     }()
     
-    private lazy var reminderCard1 = ReminderCardView(
-        title: "Vaccination",
-        subtitle: "No reminders yet",
-        icon: "syringe.fill"
-    )
+    private lazy var reminderCard1: ReminderCardView = {
+        let view = ReminderCardView(
+            title: "Vaccination",
+            subtitle: "No reminders yet",
+            icon: "syringe.fill"
+        )
+        return view
+    }()
     
-    private lazy var reminderCard2 = ReminderCardView(
-        title: "Vet Checkup",
-        subtitle: "Add reminders to see them here",
-        icon: "cross.case.fill"
-    )
+    private lazy var reminderCard2: ReminderCardView = {
+        let view = ReminderCardView(
+            title: "Vet Checkup",
+            subtitle: "Add reminders to see them here",
+            icon: "cross.case.fill"
+        )
+        return view
+    }()
     
     private lazy var remindersStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [reminderCard1, reminderCard2])
@@ -112,7 +276,7 @@ final class HomeController: BaseController {
         return stack
     }()
     
-    private lazy var summaryTitle: UILabel = {
+    private lazy var summaryTitleLabel: UILabel = {
         let label = UILabel()
         label.text = "Health Summary"
         label.font = .systemFont(ofSize: 20, weight: .bold)
@@ -133,14 +297,95 @@ final class HomeController: BaseController {
         return view
     }()
     
-    private lazy var petsTitleLabel = makeMetricTitle("Pets")
-    private lazy var petsValueLabel = makeMetricValue("0")
+    private lazy var petsTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Pets"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
-    private lazy var speciesTitleLabel = makeMetricTitle("Species")
-    private lazy var speciesValueLabel = makeMetricValue("—")
+    private lazy var petsValueLabel: UILabel = {
+        let label = UILabel()
+        label.text = "0"
+        label.font = .systemFont(ofSize: 17, weight: .bold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
-    private lazy var mainPetTitleLabel = makeMetricTitle("Main Pet")
-    private lazy var mainPetValueLabel = makeMetricValue("—")
+    private lazy var petsMetricStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [petsTitleLabel, petsValueLabel])
+        stack.axis = .vertical
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    private lazy var speciesTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Species"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var speciesValueLabel: UILabel = {
+        let label = UILabel()
+        label.text = "—"
+        label.font = .systemFont(ofSize: 17, weight: .bold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var speciesMetricStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [speciesTitleLabel, speciesValueLabel])
+        stack.axis = .vertical
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    private lazy var mainPetTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Main Pet"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var mainPetValueLabel: UILabel = {
+        let label = UILabel()
+        label.text = "—"
+        label.font = .systemFont(ofSize: 17, weight: .bold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var mainPetMetricStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [mainPetTitleLabel, mainPetValueLabel])
+        stack.axis = .vertical
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    private lazy var summaryStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [
+            petsMetricStackView,
+            speciesMetricStackView,
+            mainPetMetricStackView
+        ])
+        stack.axis = .vertical
+        stack.spacing = 16
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
     
     private lazy var loadingView: UIActivityIndicatorView = {
         let view = UIActivityIndicatorView(style: .medium)
@@ -151,20 +396,7 @@ final class HomeController: BaseController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(reloadHomeFromNotification),
-            name: .highlightedPetChanged,
-            object: nil
-        )
-        
-        let tap = UITapGestureRecognizer(target: self, action: #selector(openPetDetails))
-        petCardView.addGestureRecognizer(tap)
-        
-        petCardView.onActionTapped = { [weak self] in
-            self?.openAddPet()
-        }
+        configureObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -180,37 +412,20 @@ final class HomeController: BaseController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
-        contentView.addSubview(greetingLabel)
-        contentView.addSubview(subtitleLabel)
-        contentView.addSubview(petCardView)
-        contentView.addSubview(quickActionsTitle)
-        contentView.addSubview(actionsStackView)
-        contentView.addSubview(remindersTitle)
-        contentView.addSubview(remindersStackView)
-        contentView.addSubview(summaryTitle)
-        contentView.addSubview(summaryCardView)
-        contentView.addSubview(loadingView)
+        [
+            greetingLabel,
+            subtitleLabel,
+            petCardView,
+            quickActionsTitleLabel,
+            actionsStackView,
+            remindersTitleLabel,
+            remindersStackView,
+            summaryTitleLabel,
+            summaryCardView,
+            loadingView
+        ].forEach(contentView.addSubview)
         
-        let metric1 = makeMetricStack(title: petsTitleLabel, value: petsValueLabel)
-        let metric2 = makeMetricStack(title: speciesTitleLabel, value: speciesValueLabel)
-        let metric3 = makeMetricStack(title: mainPetTitleLabel, value: mainPetValueLabel)
-        
-        let summaryStack = UIStackView(arrangedSubviews: [metric1, metric2, metric3])
-        summaryStack.axis = .vertical
-        summaryStack.spacing = 16
-        summaryStack.translatesAutoresizingMaskIntoConstraints = false
-        
-        summaryCardView.addSubview(summaryStack)
-        
-        NSLayoutConstraint.activate([
-            summaryStack.topAnchor.constraint(equalTo: summaryCardView.topAnchor, constant: 20),
-            summaryStack.leadingAnchor.constraint(equalTo: summaryCardView.leadingAnchor, constant: 20),
-            summaryStack.trailingAnchor.constraint(equalTo: summaryCardView.trailingAnchor, constant: -20),
-            summaryStack.bottomAnchor.constraint(equalTo: summaryCardView.bottomAnchor, constant: -20),
-            
-            loadingView.centerXAnchor.constraint(equalTo: petCardView.centerXAnchor),
-            loadingView.centerYAnchor.constraint(equalTo: petCardView.centerYAnchor)
-        ])
+        summaryCardView.addSubview(summaryStackView)
     }
     
     override func configureConstraints() {
@@ -239,30 +454,38 @@ final class HomeController: BaseController {
             petCardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             petCardView.heightAnchor.constraint(equalToConstant: 130),
             
-            quickActionsTitle.topAnchor.constraint(equalTo: petCardView.bottomAnchor, constant: 28),
-            quickActionsTitle.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
-            quickActionsTitle.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
+            quickActionsTitleLabel.topAnchor.constraint(equalTo: petCardView.bottomAnchor, constant: 28),
+            quickActionsTitleLabel.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
+            quickActionsTitleLabel.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
             
-            actionsStackView.topAnchor.constraint(equalTo: quickActionsTitle.bottomAnchor, constant: 14),
+            actionsStackView.topAnchor.constraint(equalTo: quickActionsTitleLabel.bottomAnchor, constant: 14),
             actionsStackView.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
             actionsStackView.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
             
-            remindersTitle.topAnchor.constraint(equalTo: actionsStackView.bottomAnchor, constant: 28),
-            remindersTitle.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
-            remindersTitle.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
+            remindersTitleLabel.topAnchor.constraint(equalTo: actionsStackView.bottomAnchor, constant: 28),
+            remindersTitleLabel.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
+            remindersTitleLabel.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
             
-            remindersStackView.topAnchor.constraint(equalTo: remindersTitle.bottomAnchor, constant: 14),
+            remindersStackView.topAnchor.constraint(equalTo: remindersTitleLabel.bottomAnchor, constant: 14),
             remindersStackView.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
             remindersStackView.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
             
-            summaryTitle.topAnchor.constraint(equalTo: remindersStackView.bottomAnchor, constant: 28),
-            summaryTitle.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
-            summaryTitle.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
+            summaryTitleLabel.topAnchor.constraint(equalTo: remindersStackView.bottomAnchor, constant: 28),
+            summaryTitleLabel.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
+            summaryTitleLabel.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
             
-            summaryCardView.topAnchor.constraint(equalTo: summaryTitle.bottomAnchor, constant: 14),
+            summaryCardView.topAnchor.constraint(equalTo: summaryTitleLabel.bottomAnchor, constant: 14),
             summaryCardView.leadingAnchor.constraint(equalTo: greetingLabel.leadingAnchor),
             summaryCardView.trailingAnchor.constraint(equalTo: greetingLabel.trailingAnchor),
-            summaryCardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -30)
+            summaryCardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -30),
+            
+            summaryStackView.topAnchor.constraint(equalTo: summaryCardView.topAnchor, constant: 20),
+            summaryStackView.leadingAnchor.constraint(equalTo: summaryCardView.leadingAnchor, constant: 20),
+            summaryStackView.trailingAnchor.constraint(equalTo: summaryCardView.trailingAnchor, constant: -20),
+            summaryStackView.bottomAnchor.constraint(equalTo: summaryCardView.bottomAnchor, constant: -20),
+            
+            loadingView.centerXAnchor.constraint(equalTo: petCardView.centerXAnchor),
+            loadingView.centerYAnchor.constraint(equalTo: petCardView.centerYAnchor)
         ])
     }
     
@@ -273,7 +496,7 @@ final class HomeController: BaseController {
         }
         
         viewModel.onHomeLoaded = { [weak self] viewData in
-            self?.applyData(viewData)
+            self?.configureData(viewData)
         }
         
         viewModel.onError = { error in
@@ -281,7 +504,16 @@ final class HomeController: BaseController {
         }
     }
     
-    private func applyData(_ viewData: HomeViewData) {
+    private func configureObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(reloadHomeFromNotification),
+            name: .highlightedPetChanged,
+            object: nil
+        )
+    }
+    
+    private func configureData(_ viewData: HomeViewData) {
         currentPet = viewData.currentPet
         
         greetingLabel.text = viewData.greetingText
@@ -300,7 +532,6 @@ final class HomeController: BaseController {
                 showChevron: true,
                 actionTitle: "Add"
             )
-                        
         } else {
             let species = viewData.currentPet?.species ?? "DOG"
             
@@ -319,84 +550,21 @@ final class HomeController: BaseController {
         }
     }
     
-    private func makeActionButton(title: String, icon: String, action: Selector) -> UIButton {
-        let button = UIButton(type: .system)
-        button.backgroundColor = .white
-        button.layer.cornerRadius = 20
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOpacity = 0.04
-        button.layer.shadowRadius = 10
-        button.layer.shadowOffset = CGSize(width: 0, height: 4)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        
-        let iconView = UIImageView(image: UIImage(systemName: icon))
-        iconView.tintColor = .mainBlue
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconView.isUserInteractionEnabled = false
-        
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .onboardingBlack
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 2
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.isUserInteractionEnabled = false
-        
-        button.addSubview(iconView)
-        button.addSubview(titleLabel)
-        
-        NSLayoutConstraint.activate([
-            button.heightAnchor.constraint(equalToConstant: 92),
-            
-            iconView.topAnchor.constraint(equalTo: button.topAnchor, constant: 16),
-            iconView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 22),
-            iconView.heightAnchor.constraint(equalToConstant: 22),
-            
-            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 10),
-            titleLabel.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -8)
-        ])
-        
-        button.addTarget(self, action: action, for: .touchUpInside)
-        return button
-    }
-    
-    private func makeMetricTitle(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .onboardingGray
-        return label
-    }
-    
-    private func makeMetricValue(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .systemFont(ofSize: 17, weight: .bold)
-        label.textColor = .onboardingBlack
-        return label
-    }
-    
-    private func makeMetricStack(title: UILabel, value: UILabel) -> UIStackView {
-        let stack = UIStackView(arrangedSubviews: [title, value])
-        stack.axis = .vertical
-        stack.spacing = 4
-        return stack
+    private func configureOpenAddPet() {
+        let viewController = AddPetController()
+        viewController.onPetSaved = { [weak self] _ in
+            self?.viewModel.reloadHome()
+        }
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
     @objc private func addPetTapped() {
-        let vc = AddPetController()
-        vc.onPetSaved = { [weak self] _ in
-            self?.viewModel.reloadHome()
-        }
-        navigationController?.pushViewController(vc, animated: true)
+        configureOpenAddPet()
     }
     
     @objc private func addReminderTapped() {
-        let vc = RemindersController()
-        navigationController?.pushViewController(vc, animated: true)
+        let viewController = RemindersController()
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
     @objc private func addHealthLogTapped() {
@@ -415,18 +583,10 @@ final class HomeController: BaseController {
     
     @objc private func openPetDetails() {
         if let pet = currentPet {
-            let vc = PetDetailsController(pet: pet)
-            navigationController?.pushViewController(vc, animated: true)
+            let viewController = PetDetailsController(pet: pet)
+            navigationController?.pushViewController(viewController, animated: true)
         } else {
-            openAddPet()
+            configureOpenAddPet()
         }
-    }
-    
-    private func openAddPet() {
-        let vc = AddPetController()
-        vc.onPetSaved = { [weak self] _ in
-            self?.viewModel.reloadHome()
-        }
-        navigationController?.pushViewController(vc, animated: true)
     }
 }

@@ -43,10 +43,7 @@ final class ResetPasswordController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -100,36 +97,59 @@ final class ResetPasswordController: BaseController {
         return view
     }()
     
-    private lazy var passwordTitleLabel = makeFieldTitle("New Password")
-    private lazy var confirmPasswordTitleLabel = makeFieldTitle("Confirm Password")
+    private lazy var passwordTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "New Password"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var confirmPasswordTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Confirm Password"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     private lazy var passwordTextField: UITextField = {
-        let textField = makeTextField(placeholder: "Enter new password")
+        let textField = UITextField()
+        textField.placeholder = "Enter new password"
+        textField.borderStyle = .none
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
         textField.isSecureTextEntry = true
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
         textField.addTarget(self, action: #selector(clearStatus), for: .editingChanged)
         return textField
     }()
     
     private lazy var confirmPasswordTextField: UITextField = {
-        let textField = makeTextField(placeholder: "Confirm new password")
+        let textField = UITextField()
+        textField.placeholder = "Confirm new password"
+        textField.borderStyle = .none
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
         textField.isSecureTextEntry = true
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
         textField.addTarget(self, action: #selector(clearStatus), for: .editingChanged)
         return textField
     }()
     
-    private lazy var statusView = StatusMessageView()
-    
-    private lazy var resetButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Save New Password", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
-        button.backgroundColor = .mainBlue
-        button.layer.cornerRadius = 18
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 58).isActive = true
-        button.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
-        return button
+    private lazy var statusView: StatusMessageView = {
+        let view = StatusMessageView()
+        return view
     }()
     
     private lazy var hintLabel: UILabel = {
@@ -142,36 +162,57 @@ final class ResetPasswordController: BaseController {
         return label
     }()
     
+    private lazy var resetButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Save New Password", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
+        button.backgroundColor = .mainBlue
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
+        return button
+    }()
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        observeKeyboard()
+        configureObservers()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
     }
     
     // MARK: - BaseController
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
         
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
-        contentView.addSubview(backButton)
-        contentView.addSubview(heroIconContainer)
-        heroIconContainer.addSubview(heroIconView)
-        contentView.addSubview(titleLabel)
-        contentView.addSubview(subtitleLabel)
+        [
+            backButton,
+            heroIconContainer,
+            titleLabel,
+            subtitleLabel,
+            formCard
+        ].forEach(contentView.addSubview)
         
-        contentView.addSubview(formCard)
-        formCard.addSubview(passwordTitleLabel)
-        formCard.addSubview(passwordTextField)
-        formCard.addSubview(confirmPasswordTitleLabel)
-        formCard.addSubview(confirmPasswordTextField)
-        formCard.addSubview(statusView)
-        formCard.addSubview(hintLabel)
-        formCard.addSubview(resetButton)
+        heroIconContainer.addSubview(heroIconView)
+        
+        [
+            passwordTitleLabel,
+            passwordTextField,
+            confirmPasswordTitleLabel,
+            confirmPasswordTextField,
+            statusView,
+            hintLabel,
+            resetButton
+        ].forEach(formCard.addSubview)
     }
     
     override func configureConstraints() {
@@ -189,8 +230,6 @@ final class ResetPasswordController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 28),
-            backButton.heightAnchor.constraint(equalToConstant: 28),
             
             heroIconContainer.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 28),
             heroIconContainer.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
@@ -236,7 +275,7 @@ final class ResetPasswordController: BaseController {
             statusView.topAnchor.constraint(equalTo: confirmPasswordTextField.bottomAnchor, constant: 18),
             statusView.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
             statusView.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
-
+            
             hintLabel.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 14),
             hintLabel.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
             hintLabel.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
@@ -244,6 +283,7 @@ final class ResetPasswordController: BaseController {
             resetButton.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 22),
             resetButton.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
             resetButton.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            resetButton.heightAnchor.constraint(equalToConstant: 58),
             resetButton.bottomAnchor.constraint(equalTo: formCard.bottomAnchor, constant: -24)
         ])
     }
@@ -285,32 +325,9 @@ final class ResetPasswordController: BaseController {
         }
     }
     
-    // MARK: - Helpers
+    // MARK: - Configure
     
-    private func makeFieldTitle(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
-        label.textColor = .onboardingBlack
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-    
-    private func makeTextField(placeholder: String) -> UITextField {
-        let textField = UITextField()
-        textField.placeholder = placeholder
-        textField.borderStyle = .none
-        textField.font = .systemFont(ofSize: 17, weight: .regular)
-        textField.backgroundColor = .systemGray6
-        textField.layer.cornerRadius = 18
-        textField.layer.borderWidth = 1
-        textField.layer.borderColor = UIColor.systemGray5.cgColor
-        textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.setLeftPadding(18)
-        return textField
-    }
-    
-    private func observeKeyboard() {
+    private func configureObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardWillShow),

@@ -11,11 +11,13 @@ final class PetDetailsController: BaseController {
     
     private let viewModel: PetDetailsViewModelProtocol
     private var pet: PetResponse
-
-    init(pet: PetResponse, viewModel: PetDetailsViewModelProtocol? = nil) {
+    
+    init(
+        pet: PetResponse,
+        viewModel: PetDetailsViewModelProtocol? = nil
+    ) {
         self.pet = pet
-        self.viewModel = viewModel ??
-        DIContainer.shared.makePetDetailsViewModel(petId: pet.id)
+        self.viewModel = viewModel ?? DIContainer.shared.makePetDetailsViewModel(petId: pet.id)
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -40,10 +42,7 @@ final class PetDetailsController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -87,8 +86,8 @@ final class PetDetailsController: BaseController {
         imageView.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.08)
         imageView.layer.cornerRadius = 62
         imageView.clipsToBounds = true
-        imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 42, weight: .medium)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
     
@@ -140,7 +139,7 @@ final class PetDetailsController: BaseController {
         return label
     }()
     
-    // MARK: - Stat Cards
+    // MARK: - Stats
     
     private lazy var weightCard = makeStatCard(title: "WEIGHT")
     private lazy var sexCard = makeStatCard(title: "SEX")
@@ -161,7 +160,17 @@ final class PetDetailsController: BaseController {
     
     // MARK: - Growth
     
-    private lazy var growthCard: UIView = makeWhiteCard()
+    private lazy var growthCard: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 24
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.04
+        view.layer.shadowRadius = 10
+        view.layer.shadowOffset = CGSize(width: 0, height: 4)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
     private lazy var growthIconWrap: UIView = {
         let view = UIView()
@@ -209,7 +218,14 @@ final class PetDetailsController: BaseController {
         return label
     }()
     
-    private lazy var progressLeftLabel = makeSmallGrayLabel("0 weeks")
+    private lazy var progressLeftLabel: UILabel = {
+        let label = UILabel()
+        label.text = "0 weeks"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     private lazy var progressCenterLabel: UILabel = {
         let label = UILabel()
@@ -220,7 +236,14 @@ final class PetDetailsController: BaseController {
         return label
     }()
     
-    private lazy var progressRightLabel = makeSmallGrayLabel("52 weeks")
+    private lazy var progressRightLabel: UILabel = {
+        let label = UILabel()
+        label.text = "52 weeks"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .onboardingGray
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     private lazy var progressTrackView: UIView = {
         let view = UIView()
@@ -259,15 +282,6 @@ final class PetDetailsController: BaseController {
         return label
     }()
     
-    private lazy var healthViewAllButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("View All", for: .normal)
-        button.setTitleColor(.mainBlue, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-    
     private lazy var vaccinationCard = makeOverviewCard(
         icon: "cross.vial.fill",
         iconBackground: UIColor.systemGreen.withAlphaComponent(0.16),
@@ -301,6 +315,16 @@ final class PetDetailsController: BaseController {
         badgeBackground: UIColor.systemGray5
     )
     
+    private lazy var vaccinationTapGesture: UITapGestureRecognizer = {
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(openVaccinations))
+        return gesture
+    }()
+    
+    private lazy var dewormingTapGesture: UITapGestureRecognizer = {
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(openDeworming))
+        return gesture
+    }()
+    
     private lazy var healthCardsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
             vaccinationCard.container,
@@ -320,7 +344,7 @@ final class PetDetailsController: BaseController {
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
-
+    
     private lazy var healthScrollContentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -418,6 +442,13 @@ final class PetDetailsController: BaseController {
     
     // MARK: - Lifecycle
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+    }
+    
+    // MARK: - Configure
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         navigationController?.setNavigationBarHidden(true, animated: false)
@@ -425,51 +456,62 @@ final class PetDetailsController: BaseController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
-        petImageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 42, weight: .medium)
+        [
+            backButton,
+            screenTitleLabel,
+            editButton,
+            avatarContainer,
+            petTypeBadge,
+            mainActionButton,
+            nameLabel,
+            subtitleLabel,
+            statsStackView,
+            growthCard,
+            healthTitleLabel,
+            healthScrollView,
+            upcomingVisitCard
+        ].forEach(contentView.addSubview)
         
-        contentView.addSubview(backButton)
-        contentView.addSubview(screenTitleLabel)
-        contentView.addSubview(editButton)
-        
-        contentView.addSubview(avatarContainer)
         avatarContainer.addSubview(petImageView)
         
-        contentView.addSubview(petTypeBadge)
         petTypeBadge.addSubview(petTypeBadgeIcon)
         
-        contentView.addSubview(mainActionButton)
-        contentView.addSubview(nameLabel)
-        contentView.addSubview(subtitleLabel)
-        
-        contentView.addSubview(statsStackView)
-        
-        contentView.addSubview(growthCard)
         growthCard.addSubview(growthIconWrap)
         growthIconWrap.addSubview(growthIcon)
-        growthCard.addSubview(growthTitleLabel)
-        growthCard.addSubview(growthSubtitleLabel)
-        growthCard.addSubview(growthWeekBadge)
-        growthCard.addSubview(progressLeftLabel)
-        growthCard.addSubview(progressCenterLabel)
-        growthCard.addSubview(progressRightLabel)
-        growthCard.addSubview(progressTrackView)
+        [
+            growthTitleLabel,
+            growthSubtitleLabel,
+            growthWeekBadge,
+            progressLeftLabel,
+            progressCenterLabel,
+            progressRightLabel,
+            progressTrackView,
+            growthDescriptionLabel
+        ].forEach(growthCard.addSubview)
         progressTrackView.addSubview(progressFillView)
-        growthCard.addSubview(growthDescriptionLabel)
         
-        contentView.addSubview(healthTitleLabel)
-        contentView.addSubview(healthScrollView)
         healthScrollView.addSubview(healthScrollContentView)
         healthScrollContentView.addSubview(healthCardsStackView)
         
-        contentView.addSubview(upcomingVisitCard)
-        upcomingVisitCard.addSubview(upcomingVisitTitleLabel)
-        upcomingVisitCard.addSubview(upcomingVisitBadge)
-        upcomingVisitCard.addSubview(visitDateCircle)
-        visitDateCircle.addSubview(visitMonthLabel)
-        visitDateCircle.addSubview(visitDayLabel)
-        upcomingVisitCard.addSubview(visitTitleLabel)
-        upcomingVisitCard.addSubview(visitSubtitleLabel)
-        upcomingVisitCard.addSubview(visitTimeBadge)
+        [
+            upcomingVisitTitleLabel,
+            upcomingVisitBadge,
+            visitDateCircle,
+            visitTitleLabel,
+            visitSubtitleLabel,
+            visitTimeBadge
+        ].forEach(upcomingVisitCard.addSubview)
+        
+        [
+            visitMonthLabel,
+            visitDayLabel
+        ].forEach(visitDateCircle.addSubview)
+        
+        vaccinationCard.container.addGestureRecognizer(vaccinationTapGesture)
+        vaccinationCard.container.isUserInteractionEnabled = true
+        
+        dewormingCard.container.addGestureRecognizer(dewormingTapGesture)
+        dewormingCard.container.isUserInteractionEnabled = true
     }
     
     override func configureConstraints() {
@@ -487,11 +529,11 @@ final class PetDetailsController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 30),
-            backButton.heightAnchor.constraint(equalToConstant: 30),
             
             screenTitleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             screenTitleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            screenTitleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 12),
+            screenTitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: editButton.leadingAnchor, constant: -12),
             
             editButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             editButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
@@ -587,23 +629,23 @@ final class PetDetailsController: BaseController {
             healthTitleLabel.topAnchor.constraint(equalTo: growthCard.bottomAnchor, constant: 28),
             healthTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             healthTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-
+            
             healthScrollView.topAnchor.constraint(equalTo: healthTitleLabel.bottomAnchor, constant: 16),
             healthScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             healthScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             healthScrollView.heightAnchor.constraint(equalToConstant: 190),
-
+            
             healthScrollContentView.topAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.topAnchor),
             healthScrollContentView.leadingAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.leadingAnchor),
             healthScrollContentView.trailingAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.trailingAnchor),
             healthScrollContentView.bottomAnchor.constraint(equalTo: healthScrollView.contentLayoutGuide.bottomAnchor),
             healthScrollContentView.heightAnchor.constraint(equalTo: healthScrollView.frameLayoutGuide.heightAnchor),
-
+            
             healthCardsStackView.topAnchor.constraint(equalTo: healthScrollContentView.topAnchor),
             healthCardsStackView.leadingAnchor.constraint(equalTo: healthScrollContentView.leadingAnchor, constant: 20),
             healthCardsStackView.trailingAnchor.constraint(equalTo: healthScrollContentView.trailingAnchor, constant: -20),
             healthCardsStackView.bottomAnchor.constraint(equalTo: healthScrollContentView.bottomAnchor),
-
+            
             vaccinationCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
             dewormingCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
             activityCard.container.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.82),
@@ -649,31 +691,29 @@ final class PetDetailsController: BaseController {
     }
     
     override func configureViewModel() {
-
         viewModel.onPetLoaded = { [weak self] pet in
             self?.pet = pet
-            self?.applyPet()
+            self?.configurePet()
         }
         
         viewModel.onHealthOverviewLoaded = { [weak self] viewData in
-            self?.applyHealthOverview(viewData)
+            self?.configureHealthOverview(viewData)
         }
-
+        
         viewModel.onLoadingStateChanged = { isLoading in
             print("Loading:", isLoading)
         }
-
+        
         viewModel.onError = { error in
             print(error)
         }
-
+        
         viewModel.loadPet()
-
     }
     
-    // MARK: - Apply
+    // MARK: - Configure Data
     
-    private func applyPet() {
+    private func configurePet() {
         nameLabel.text = pet.name
         
         if pet.isHighlighted == true {
@@ -687,7 +727,7 @@ final class PetDetailsController: BaseController {
         }
         
         let breed = pet.breed ?? "Unknown breed"
-        let ageText = makeAgeText(from: pet.dob)
+        let ageText = configureAgeText(from: pet.dob)
         subtitleLabel.text = "\(breed) • \(ageText)"
         
         if let photoUrl = pet.photoUrl,
@@ -710,46 +750,127 @@ final class PetDetailsController: BaseController {
             avatarContainer.backgroundColor = .white
         }
         
-        weightCard.valueLabel.text = pet.weight != nil ? formattedWeight(pet.weight!) : "—"
+        weightCard.valueLabel.text = pet.weight != nil ? configureFormattedWeight(pet.weight!) : "—"
         weightCard.unitLabel.text = pet.weight != nil ? "kg" : ""
         
         sexCard.valueLabel.text = pet.sex.capitalized
         sexCard.unitLabel.text = ""
         
-        ageCard.valueLabel.text = makeShortAgeValue(from: pet.dob)
-        ageCard.unitLabel.text = makeShortAgeUnit(from: pet.dob)
+        ageCard.valueLabel.text = configureShortAgeValue(from: pet.dob)
+        ageCard.unitLabel.text = configureShortAgeUnit(from: pet.dob)
         
         growthSubtitleLabel.text = pet.species.uppercased() == "DOG" ? "Puppy Stage" : "Kitten Stage"
-        growthWeekBadge.text = makeWeekBadgeText(from: pet.dob)
-        progressCenterLabel.text = makeProgressText(from: pet.dob)
-        growthDescriptionLabel.text = makeGrowthDescription(from: pet.dob)
+        growthWeekBadge.text = configureWeekBadgeText(from: pet.dob)
+        progressCenterLabel.text = configureProgressText(from: pet.dob)
+        growthDescriptionLabel.text = configureGrowthDescription(from: pet.dob)
+    }
+    
+    private func configureHealthOverview(_ viewData: PetHealthOverviewViewData) {
+        configureOverviewCard(
+            vaccinationCard,
+            subtitle: viewData.vaccination.subtitle,
+            statusText: viewData.vaccination.statusText
+        )
+        
+        configureOverviewCard(
+            dewormingCard,
+            subtitle: viewData.deworming.subtitle,
+            statusText: viewData.deworming.statusText
+        )
+        
+        configureOverviewCard(
+            activityCard,
+            subtitle: viewData.activity.subtitle,
+            statusText: viewData.activity.statusText
+        )
+        
+        if let vetVisit = viewData.upcomingVetVisit {
+            configureUpcomingVisitFilled(vetVisit)
+        } else {
+            configureUpcomingVisitEmpty()
+        }
+    }
+    
+    private func configureOverviewCard(
+        _ card: (container: UIView, subtitleLabel: UILabel, badgeLabel: UILabel),
+        subtitle: String,
+        statusText: String
+    ) {
+        card.subtitleLabel.text = subtitle
+        card.badgeLabel.text = statusText
+        
+        switch statusText.lowercased() {
+        case "overdue":
+            card.badgeLabel.textColor = .systemRed
+            card.badgeLabel.backgroundColor = UIColor.systemRed.withAlphaComponent(0.14)
+            
+        case "due soon":
+            card.badgeLabel.textColor = .systemOrange
+            card.badgeLabel.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.14)
+            
+        case "up to date":
+            card.badgeLabel.textColor = .systemGreen
+            card.badgeLabel.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.14)
+            
+        default:
+            card.badgeLabel.textColor = .mainBlue
+            card.badgeLabel.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.14)
+        }
+    }
+    
+    private func configureUpcomingVisitFilled(_ vetVisit: PetUpcomingVetVisitViewData) {
+        upcomingVisitCard.isHidden = false
+        
+        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+        upcomingVisitBadge.isHidden = false
+        upcomingVisitBadge.text = vetVisit.badgeText
+        
+        visitDateCircle.isHidden = false
+        visitTimeBadge.isHidden = false
+        
+        let parts = vetVisit.dateText.components(separatedBy: " ")
+        visitMonthLabel.text = parts.first ?? "—"
+        visitDayLabel.text = parts.count > 1 ? parts[1] : "—"
+        visitDayLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        
+        visitTitleLabel.text = vetVisit.title
+        visitSubtitleLabel.text = vetVisit.clinicName
+        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.85)
+        visitTimeBadge.text = "◷ \(vetVisit.timeText)"
+    }
+    
+    private func configureUpcomingVisitEmpty() {
+        upcomingVisitCard.isHidden = false
+        
+        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
+        upcomingVisitBadge.isHidden = true
+        
+        visitDateCircle.isHidden = false
+        visitTimeBadge.isHidden = true
+        
+        visitMonthLabel.text = "🐾"
+        visitDayLabel.text = "🐾"
+        visitDayLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        
+        visitTitleLabel.text = "No upcoming vet visits"
+        visitTitleLabel.textColor = .white
+        
+        visitSubtitleLabel.text = "Add a vet reminder to keep appointments organized."
+        visitSubtitleLabel.numberOfLines = 0
+        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.78)
     }
     
     // MARK: - Builders
     
-    private func makeWhiteCard() -> UIView {
-        let view = UIView()
-        view.backgroundColor = .white
-        view.layer.cornerRadius = 24
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.04
-        view.layer.shadowRadius = 10
-        view.layer.shadowOffset = CGSize(width: 0, height: 4)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }
-    
-    private func makeSmallGrayLabel(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .onboardingGray
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-    
     private func makeStatCard(title: String) -> (container: UIView, titleLabel: UILabel, valueLabel: UILabel, unitLabel: UILabel) {
-        let container = makeWhiteCard()
+        let container = UIView()
+        container.backgroundColor = .white
+        container.layer.cornerRadius = 24
+        container.layer.shadowColor = UIColor.black.cgColor
+        container.layer.shadowOpacity = 0.04
+        container.layer.shadowRadius = 10
+        container.layer.shadowOffset = CGSize(width: 0, height: 4)
+        container.translatesAutoresizingMaskIntoConstraints = false
         
         let titleLabel = UILabel()
         titleLabel.text = title
@@ -803,7 +924,14 @@ final class PetDetailsController: BaseController {
         badgeBackground: UIColor
     ) -> (container: UIView, subtitleLabel: UILabel, badgeLabel: UILabel) {
         
-        let container = makeWhiteCard()
+        let container = UIView()
+        container.backgroundColor = .white
+        container.layer.cornerRadius = 24
+        container.layer.shadowColor = UIColor.black.cgColor
+        container.layer.shadowOpacity = 0.04
+        container.layer.shadowRadius = 10
+        container.layer.shadowOffset = CGSize(width: 0, height: 4)
+        container.translatesAutoresizingMaskIntoConstraints = false
         
         let iconWrap = UIView()
         iconWrap.backgroundColor = iconBackground
@@ -874,15 +1002,16 @@ final class PetDetailsController: BaseController {
     
     // MARK: - Helpers
     
-    private func formattedWeight(_ value: Double) -> String {
+    private func configureFormattedWeight(_ value: Double) -> String {
         if value.truncatingRemainder(dividingBy: 1) == 0 {
             return String(Int(value))
         }
+        
         return String(format: "%.1f", value)
     }
     
-    private func makeAgeText(from dob: String?) -> String {
-        guard let date = parseDate(dob) else { return "Age unknown" }
+    private func configureAgeText(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else { return "Age unknown" }
         
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
@@ -898,8 +1027,8 @@ final class PetDetailsController: BaseController {
         return weeks == 1 ? "1 Week" : "\(weeks) Weeks"
     }
     
-    private func makeShortAgeValue(from dob: String?) -> String {
-        guard let date = parseDate(dob) else { return "—" }
+    private func configureShortAgeValue(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else { return "—" }
         
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
@@ -909,8 +1038,8 @@ final class PetDetailsController: BaseController {
         return "\(max(1, components.weekOfMonth ?? 1))"
     }
     
-    private func makeShortAgeUnit(from dob: String?) -> String {
-        guard let date = parseDate(dob) else { return "" }
+    private func configureShortAgeUnit(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else { return "" }
         
         let components = Calendar.current.dateComponents([.year, .month, .weekOfMonth], from: date, to: Date())
         
@@ -926,21 +1055,21 @@ final class PetDetailsController: BaseController {
         return weeks == 1 ? "wk" : "wks"
     }
     
-    private func makeWeekBadgeText(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else { return "Week 1" }
+    private func configureWeekBadgeText(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else { return "Week 1" }
         let weeks = max(1, Calendar.current.dateComponents([.weekOfYear], from: date, to: Date()).weekOfYear ?? 1)
         return "Week \(weeks)"
     }
     
-    private func makeProgressText(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else { return "10% Complete" }
+    private func configureProgressText(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else { return "10% Complete" }
         let weeks = max(1, Calendar.current.dateComponents([.weekOfYear], from: date, to: Date()).weekOfYear ?? 1)
         let percent = min(100, Int((Double(weeks) / 52.0) * 100.0))
         return "\(percent)% Complete"
     }
     
-    private func makeGrowthDescription(from dob: String?) -> String {
-        guard let dob, let date = parseDate(dob) else {
+    private func configureGrowthDescription(from dob: String?) -> String {
+        guard let date = configureDate(from: dob) else {
             return "Keep tracking development, health reminders and growth regularly."
         }
         
@@ -955,51 +1084,7 @@ final class PetDetailsController: BaseController {
         }
     }
     
-    private func makePreventiveTitleLabel() -> UILabel {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .bold)
-        label.textColor = .onboardingBlack
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-
-    private func makePreventiveSubtitleLabel() -> UILabel {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .onboardingGray
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-
-    private func makePreventiveStatusLabel() -> PaddingLabel {
-        let label = PaddingLabel()
-        label.font = .systemFont(ofSize: 12, weight: .bold)
-        label.textInsets = UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
-        label.layer.cornerRadius = 10
-        label.clipsToBounds = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-    
-    private func applyPreventiveStatusStyle(_ label: UILabel, text: String) {
-        switch text.lowercased() {
-        case "overdue":
-            label.textColor = .systemRed
-            label.backgroundColor = UIColor.systemRed.withAlphaComponent(0.12)
-        case "due soon":
-            label.textColor = .systemOrange
-            label.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.12)
-        case "up to date":
-            label.textColor = .systemGreen
-            label.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.12)
-        default:
-            label.textColor = .mainBlue
-            label.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.12)
-        }
-    }
-    
-    private func parseDate(_ value: String?) -> Date? {
+    private func configureDate(from value: String?) -> Date? {
         guard let value, !value.isEmpty else { return nil }
         
         let isoFormatter = ISO8601DateFormatter()
@@ -1034,101 +1119,6 @@ final class PetDetailsController: BaseController {
         return formatter.date(from: value)
     }
     
-    private func applyHealthOverview(_ viewData: PetHealthOverviewViewData) {
-        updateOverviewCard(
-            vaccinationCard,
-            subtitle: viewData.vaccination.subtitle,
-            statusText: viewData.vaccination.statusText
-        )
-        
-        updateOverviewCard(
-            dewormingCard,
-            subtitle: viewData.deworming.subtitle,
-            statusText: viewData.deworming.statusText
-        )
-        
-        updateOverviewCard(
-            activityCard,
-            subtitle: viewData.activity.subtitle,
-            statusText: viewData.activity.statusText
-        )
-        
-        if let vetVisit = viewData.upcomingVetVisit {
-            applyUpcomingVisitFilled(vetVisit)
-        } else {
-            applyUpcomingVisitEmpty()
-        }
-    }
-    
-    private func updateOverviewCard(
-        _ card: (container: UIView, subtitleLabel: UILabel, badgeLabel: UILabel),
-        subtitle: String,
-        statusText: String
-    ) {
-        card.subtitleLabel.text = subtitle
-        card.badgeLabel.text = statusText
-
-        switch statusText.lowercased() {
-        case "overdue":
-            card.badgeLabel.textColor = .systemRed
-            card.badgeLabel.backgroundColor = UIColor.systemRed.withAlphaComponent(0.14)
-
-        case "due soon":
-            card.badgeLabel.textColor = .systemOrange
-            card.badgeLabel.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.14)
-
-        case "up to date":
-            card.badgeLabel.textColor = .systemGreen
-            card.badgeLabel.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.14)
-
-        default:
-            card.badgeLabel.textColor = .mainBlue
-            card.badgeLabel.backgroundColor = UIColor.mainBlue.withAlphaComponent(0.14)
-        }
-    }
-    
-    private func applyUpcomingVisitFilled(_ vetVisit: PetUpcomingVetVisitViewData) {
-        upcomingVisitCard.isHidden = false
-        
-        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
-        upcomingVisitBadge.isHidden = false
-        upcomingVisitBadge.text = vetVisit.badgeText
-        
-        visitDateCircle.isHidden = false
-        visitTimeBadge.isHidden = false
-        
-        let parts = vetVisit.dateText.components(separatedBy: " ")
-        visitMonthLabel.text = parts.first ?? "—"
-        visitDayLabel.text = parts.count > 1 ? parts[1] : "—"
-        visitDayLabel.font = .systemFont(ofSize: 28, weight: .bold)
-        
-        visitTitleLabel.text = vetVisit.title
-        visitSubtitleLabel.text = vetVisit.clinicName
-        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.85)
-        visitTimeBadge.text = "◷ \(vetVisit.timeText)"
-    }
-    
-    private func applyUpcomingVisitEmpty() {
-        upcomingVisitCard.isHidden = false
-        
-        upcomingVisitTitleLabel.text = "Upcoming Vet Visit"
-        upcomingVisitBadge.isHidden = true
-        
-        visitDateCircle.isHidden = false
-        visitTimeBadge.isHidden = true
-        
-        visitMonthLabel.text = "🐾"
-        visitDayLabel.text = "🐾"
-        visitDayLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        
-        visitTitleLabel.text = "No upcoming vet visits"
-        visitTitleLabel.textColor = .white
-        
-        visitSubtitleLabel.text = "Add a vet reminder to keep appointments organized."
-        visitSubtitleLabel.numberOfLines = 0
-        visitSubtitleLabel.textColor = UIColor.white.withAlphaComponent(0.78)
-    }
-    
     // MARK: - Actions
     
     @objc private func backTapped() {
@@ -1136,20 +1126,28 @@ final class PetDetailsController: BaseController {
     }
     
     @objc private func editTapped() {
-        let vc = AddPetController(mode: .edit(pet))
+        let viewController = AddPetController(mode: .edit(pet))
         
-        vc.onPetSaved = { [weak self] updatedPet in
+        viewController.onPetSaved = { [weak self] updatedPet in
             guard let self else { return }
             self.pet = updatedPet
-            self.applyPet()
+            self.configurePet()
         }
         
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
     @objc private func mainActionTapped() {
         viewModel.setMainPet()
     }
     
+    @objc private func openVaccinations() {
+        let viewController = VaccinationRecordsController(petId: pet.id)
+        navigationController?.pushViewController(viewController, animated: true)
+    }
+    
+    @objc private func openDeworming() {
+        let viewController = DewormingRecordsController(petId: pet.id)
+        navigationController?.pushViewController(viewController, animated: true)
+    }
 }
-

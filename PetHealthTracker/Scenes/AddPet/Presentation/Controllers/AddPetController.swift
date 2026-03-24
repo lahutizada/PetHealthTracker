@@ -84,10 +84,7 @@ final class AddPetController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -97,6 +94,7 @@ final class AddPetController: BaseController {
         label.text = "Add New Pet"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
+        label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -343,11 +341,11 @@ final class AddPetController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 28),
-            backButton.heightAnchor.constraint(equalToConstant: 28),
             
             headerLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             headerLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            headerLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 12),
+            headerLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -20),
             
             photoContainer.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 28),
             photoContainer.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
@@ -447,7 +445,7 @@ final class AddPetController: BaseController {
             statusView.topAnchor.constraint(equalTo: neuteredCard.bottomAnchor, constant: 12),
             statusView.leadingAnchor.constraint(equalTo: petTypeLabel.leadingAnchor),
             statusView.trailingAnchor.constraint(equalTo: petTypeLabel.trailingAnchor),
-
+            
             saveButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 16),
             saveButton.leadingAnchor.constraint(equalTo: petTypeLabel.leadingAnchor),
             saveButton.trailingAnchor.constraint(equalTo: petTypeLabel.trailingAnchor),

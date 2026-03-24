@@ -9,14 +9,15 @@ import UIKit
 
 final class RemindersController: BaseController {
     
+    private let viewModel: RemindersViewModelProtocol
+    
     private var isOverdueExpanded = true
     private var isUpcomingExpanded = true
     private var isCompletedExpanded = true
+    
     private var overdueHeightConstraint: NSLayoutConstraint!
     private var upcomingHeightConstraint: NSLayoutConstraint!
     private var completedHeightConstraint: NSLayoutConstraint!
-    
-    private let viewModel: RemindersViewModelProtocol
     
     init(viewModel: RemindersViewModelProtocol = DIContainer.shared.makeRemindersViewModel()) {
         self.viewModel = viewModel
@@ -26,6 +27,8 @@ final class RemindersController: BaseController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    // MARK: - UI
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -42,10 +45,7 @@ final class RemindersController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -55,6 +55,7 @@ final class RemindersController: BaseController {
         label.text = "Reminders & Tasks"
         label.font = .systemFont(ofSize: 24, weight: .bold)
         label.textColor = .onboardingBlack
+        label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -76,6 +77,9 @@ final class RemindersController: BaseController {
     private lazy var overdueHeaderView: ReminderSectionHeaderView = {
         let view = ReminderSectionHeaderView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.onToggleTapped = { [weak self] in
+            self?.configureOverdueToggle()
+        }
         return view
     }()
     
@@ -90,6 +94,9 @@ final class RemindersController: BaseController {
     private lazy var upcomingHeaderView: ReminderSectionHeaderView = {
         let view = ReminderSectionHeaderView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.onToggleTapped = { [weak self] in
+            self?.configureUpcomingToggle()
+        }
         return view
     }()
     
@@ -104,6 +111,9 @@ final class RemindersController: BaseController {
     private lazy var completedHeaderView: ReminderSectionHeaderView = {
         let view = ReminderSectionHeaderView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.onToggleTapped = { [weak self] in
+            self?.configureCompletedToggle()
+        }
         return view
     }()
     
@@ -130,105 +140,35 @@ final class RemindersController: BaseController {
         return button
     }()
     
+    // MARK: - Lifecycle
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
         viewModel.loadReminders()
     }
     
+    // MARK: - Configure
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
         
         view.addSubview(scrollView)
         view.addSubview(addButton)
         scrollView.addSubview(contentView)
         
-        contentView.addSubview(backButton)
-        contentView.addSubview(titleLabel)
-        contentView.addSubview(calendarButton)
-        contentView.addSubview(focusCardView)
-        
-        contentView.addSubview(overdueHeaderView)
-        contentView.addSubview(overdueStackView)
-        
-        contentView.addSubview(upcomingHeaderView)
-        contentView.addSubview(upcomingStackView)
-        
-        contentView.addSubview(completedHeaderView)
-        contentView.addSubview(completedStackView)
-        
-        overdueHeaderView.onToggleTapped = { [weak self] in
-            guard let self else { return }
-            
-            self.isOverdueExpanded.toggle()
-            
-            let isExpanded = self.isOverdueExpanded
-            
-            if isExpanded {
-                self.overdueStackView.isHidden = false
-                self.overdueStackView.alpha = 0
-                self.overdueHeightConstraint.isActive = false
-            } else {
-                self.overdueHeightConstraint.isActive = true
-            }
-            
-            UIView.animate(withDuration: 0.25, animations: {
-                self.overdueStackView.alpha = isExpanded ? 1 : 0
-                self.view.layoutIfNeeded()
-            }, completion: { _ in
-                if !isExpanded {
-                    self.overdueStackView.isHidden = true
-                }
-            })
-        }
-
-        upcomingHeaderView.onToggleTapped = { [weak self] in
-            guard let self else { return }
-            
-            self.isUpcomingExpanded.toggle()
-            let isExpanded = self.isUpcomingExpanded
-            
-            if isExpanded {
-                self.upcomingStackView.isHidden = false
-                self.upcomingStackView.alpha = 0
-                self.upcomingHeightConstraint.isActive = false
-            } else {
-                self.upcomingHeightConstraint.isActive = true
-            }
-            
-            UIView.animate(withDuration: 0.25, animations: {
-                self.upcomingStackView.alpha = isExpanded ? 1 : 0
-                self.view.layoutIfNeeded()
-            }, completion: { _ in
-                if !isExpanded {
-                    self.upcomingStackView.isHidden = true
-                }
-            })
-        }
-
-        completedHeaderView.onToggleTapped = { [weak self] in
-            guard let self else { return }
-            
-            self.isCompletedExpanded.toggle()
-            let isExpanded = self.isCompletedExpanded
-            
-            if isExpanded {
-                self.completedStackView.isHidden = false
-                self.completedStackView.alpha = 0
-                self.completedHeightConstraint.isActive = false
-            } else {
-                self.completedHeightConstraint.isActive = true
-            }
-            
-            UIView.animate(withDuration: 0.25, animations: {
-                self.completedStackView.alpha = isExpanded ? 1 : 0
-                self.view.layoutIfNeeded()
-            }, completion: { _ in
-                if !isExpanded {
-                    self.completedStackView.isHidden = true
-                }
-            })
-        }
+        [
+            backButton,
+            titleLabel,
+            calendarButton,
+            focusCardView,
+            overdueHeaderView,
+            overdueStackView,
+            upcomingHeaderView,
+            upcomingStackView,
+            completedHeaderView,
+            completedStackView
+        ].forEach(contentView.addSubview)
     }
     
     override func configureConstraints() {
@@ -246,11 +186,11 @@ final class RemindersController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 28),
-            backButton.heightAnchor.constraint(equalToConstant: 28),
             
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: calendarButton.leadingAnchor, constant: -12),
             
             calendarButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             calendarButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
@@ -297,13 +237,12 @@ final class RemindersController: BaseController {
         
         overdueHeightConstraint = overdueStackView.heightAnchor.constraint(equalToConstant: 0)
         overdueHeightConstraint.isActive = false
-
+        
         upcomingHeightConstraint = upcomingStackView.heightAnchor.constraint(equalToConstant: 0)
         upcomingHeightConstraint.isActive = false
-
+        
         completedHeightConstraint = completedStackView.heightAnchor.constraint(equalToConstant: 0)
         completedHeightConstraint.isActive = false
-        
     }
     
     override func configureViewModel() {
@@ -313,7 +252,7 @@ final class RemindersController: BaseController {
         
         viewModel.onRemindersLoaded = { [weak self] viewData in
             DispatchQueue.main.async {
-                self?.applyData(viewData)
+                self?.configureData(viewData)
             }
         }
         
@@ -322,7 +261,9 @@ final class RemindersController: BaseController {
         }
     }
     
-    private func applyData(_ viewData: ReminderScreenViewData) {
+    // MARK: - Configure Data
+    
+    private func configureData(_ viewData: ReminderScreenViewData) {
         focusCardView.configure(
             taskCount: viewData.todayFocusCount,
             petsText: viewData.focusPetsText,
@@ -350,19 +291,25 @@ final class RemindersController: BaseController {
             isExpanded: isCompletedExpanded
         )
         
-        applyItems(viewData.overdueItems, to: overdueStackView)
-        applyItems(viewData.upcomingItems, to: upcomingStackView)
-        applyItems(viewData.completedItems, to: completedStackView)
+        configureItems(viewData.overdueItems, to: overdueStackView, emptyText: "No overdue reminders")
+        configureItems(viewData.upcomingItems, to: upcomingStackView, emptyText: "No upcoming reminders")
+        configureItems(viewData.completedItems, to: completedStackView, emptyText: "No completed reminders yet")
         
         overdueStackView.isHidden = !isOverdueExpanded
         upcomingStackView.isHidden = !isUpcomingExpanded
         completedStackView.isHidden = !isCompletedExpanded
     }
     
-    private func applyItems(_ items: [ReminderItemViewData], to stackView: UIStackView) {
+    private func configureItems(_ items: [ReminderItemViewData], to stackView: UIStackView, emptyText: String) {
         stackView.arrangedSubviews.forEach { view in
             stackView.removeArrangedSubview(view)
             view.removeFromSuperview()
+        }
+        
+        guard !items.isEmpty else {
+            let emptyView = configureEmptyStateView(text: emptyText)
+            stackView.addArrangedSubview(emptyView)
+            return
         }
         
         for item in items {
@@ -375,28 +322,28 @@ final class RemindersController: BaseController {
             }
             
             card.onDeleteTapped = { [weak self] in
-                self?.showDeleteAlert(for: item.id)
+                self?.configureDeleteAlert(for: item.id)
             }
             
             card.onEditTapped = { [weak self] in
-                self?.openEditReminder(for: item.id)
+                self?.configureEditReminder(for: item.id)
             }
             
             stackView.addArrangedSubview(card)
         }
     }
     
-    private func openEditReminder(for id: String) {
+    private func configureEditReminder(for id: String) {
         guard let reminder = viewModel.reminder(by: id) else { return }
         
-        let vc = AddReminderController(mode: .edit(reminder))
-        vc.onReminderSaved = { [weak self] in
+        let viewController = AddReminderController(mode: .edit(reminder))
+        viewController.onReminderSaved = { [weak self] in
             self?.viewModel.reloadReminders()
         }
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
-    private func showDeleteAlert(for id: String) {
+    private func configureDeleteAlert(for id: String) {
         let alert = UIAlertController(
             title: "Delete Reminder",
             message: "Are you sure you want to delete this reminder?",
@@ -404,22 +351,101 @@ final class RemindersController: BaseController {
         )
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-            self?.viewModel.deleteReminder(id: id)
-        })
+        alert.addAction(
+            UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+                self?.viewModel.deleteReminder(id: id)
+            }
+        )
         
         present(alert, animated: true)
     }
+    
+    private func configureEmptyStateView(text: String) -> UIView {
+        let label = UILabel()
+        label.text = text
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = .onboardingGray
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(label)
+        
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -18),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16)
+        ])
+        
+        return container
+    }
+    
+    // MARK: - Toggle Sections
+    
+    private func configureOverdueToggle() {
+        isOverdueExpanded.toggle()
+        configureSectionToggle(
+            isExpanded: isOverdueExpanded,
+            stackView: overdueStackView,
+            heightConstraint: overdueHeightConstraint
+        )
+    }
+    
+    private func configureUpcomingToggle() {
+        isUpcomingExpanded.toggle()
+        configureSectionToggle(
+            isExpanded: isUpcomingExpanded,
+            stackView: upcomingStackView,
+            heightConstraint: upcomingHeightConstraint
+        )
+    }
+    
+    private func configureCompletedToggle() {
+        isCompletedExpanded.toggle()
+        configureSectionToggle(
+            isExpanded: isCompletedExpanded,
+            stackView: completedStackView,
+            heightConstraint: completedHeightConstraint
+        )
+    }
+    
+    private func configureSectionToggle(
+        isExpanded: Bool,
+        stackView: UIStackView,
+        heightConstraint: NSLayoutConstraint
+    ) {
+        if isExpanded {
+            stackView.isHidden = false
+            stackView.alpha = 0
+            heightConstraint.isActive = false
+        } else {
+            heightConstraint.isActive = true
+        }
+        
+        UIView.animate(withDuration: 0.25, animations: {
+            stackView.alpha = isExpanded ? 1 : 0
+            self.view.layoutIfNeeded()
+        }, completion: { _ in
+            if !isExpanded {
+                stackView.isHidden = true
+            }
+        })
+    }
+    
+    // MARK: - Actions
     
     @objc private func backTapped() {
         navigationController?.popViewController(animated: true)
     }
     
     @objc private func addTapped() {
-        let vc = AddReminderController()
-        vc.onReminderSaved = { [weak self] in
+        let viewController = AddReminderController()
+        viewController.onReminderSaved = { [weak self] in
             self?.viewModel.reloadReminders()
         }
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.pushViewController(viewController, animated: true)
     }
 }

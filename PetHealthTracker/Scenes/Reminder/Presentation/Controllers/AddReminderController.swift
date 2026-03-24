@@ -19,6 +19,20 @@ final class AddReminderController: BaseController {
     private let mode: Mode
     private let viewModel: AddReminderViewModelProtocol
     
+    private var petOptions: [ReminderPetItem] = []
+    private var selectedPetIndex: Int = 0
+    private var selectedCategory: String = ReminderCategory.vet.title
+    
+    private let categoryOptions = [
+        ReminderCategory.vet.title,
+        ReminderCategory.vaccination.title,
+        ReminderCategory.deworming.title,
+        ReminderCategory.medication.title,
+        ReminderCategory.grooming.title,
+        ReminderCategory.shopping.title,
+        ReminderCategory.general.title
+    ]
+    
     init(
         mode: Mode = .create,
         viewModel: AddReminderViewModelProtocol = DIContainer.shared.makeAddReminderViewModel()
@@ -32,24 +46,36 @@ final class AddReminderController: BaseController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private var petOptions: [ReminderPetItem] = []
+    // MARK: - UI
     
-    private let categoryOptions = [
-        ReminderCategory.vet.title,
-        ReminderCategory.vaccination.title,
-        ReminderCategory.deworming.title,
-        ReminderCategory.medication.title,
-        ReminderCategory.grooming.title,
-        ReminderCategory.shopping.title,
-        ReminderCategory.general.title
-    ]
+    private lazy var petPicker: UIPickerView = {
+        let picker = UIPickerView()
+        picker.delegate = self
+        picker.dataSource = self
+        return picker
+    }()
     
-    private let petPicker = UIPickerView()
-    private let categoryPicker = UIPickerView()
-    private let datePicker = UIDatePicker()
+    private lazy var categoryPicker: UIPickerView = {
+        let picker = UIPickerView()
+        picker.delegate = self
+        picker.dataSource = self
+        return picker
+    }()
     
-    private var selectedPetIndex: Int = 0
-    private var selectedCategory: String = ReminderCategory.vet.title
+    private lazy var datePicker: UIDatePicker = {
+        let picker = UIDatePicker()
+        picker.datePickerMode = .dateAndTime
+        picker.preferredDatePickerStyle = .wheels
+        
+        switch mode {
+        case .create:
+            picker.minimumDate = Date()
+        case .edit:
+            picker.minimumDate = nil
+        }
+        
+        return picker
+    }()
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -67,10 +93,7 @@ final class AddReminderController: BaseController {
     }()
     
     private lazy var backButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        button.tintColor = .onboardingBlack
-        button.translatesAutoresizingMaskIntoConstraints = false
+        let button = AppBackButton()
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         return button
     }()
@@ -80,6 +103,7 @@ final class AddReminderController: BaseController {
         label.text = "Add Reminder"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .onboardingBlack
+        label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -138,38 +162,118 @@ final class AddReminderController: BaseController {
         return view
     }()
     
-    private lazy var titleFieldLabel = makeFieldLabel("Reminder Title")
-    private lazy var petFieldLabel = makeFieldLabel("Pet")
-    private lazy var categoryFieldLabel = makeFieldLabel("Category")
-    private lazy var dateFieldLabel = makeFieldLabel("Due Date")
-    private lazy var notesFieldLabel = makeFieldLabel("Notes")
+    private lazy var titleFieldLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Reminder Title"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var petFieldLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Pet"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var categoryFieldLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Category"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var dateFieldLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Due Date"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var notesFieldLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Notes"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .onboardingBlack
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     private lazy var titleTextField: UITextField = {
-        let tf = makeTextField("e.g. Royal Vet")
-        tf.addTarget(self, action: #selector(clearError), for: .editingChanged)
-        return tf
+        let textField = UITextField()
+        textField.placeholder = "e.g. Royal Vet"
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
+        textField.addTarget(self, action: #selector(clearError), for: .editingChanged)
+        return textField
     }()
     
     private lazy var petTextField: UITextField = {
-        let tf = makeTextField("Select pet")
-        tf.inputView = petPicker
-        tf.tintColor = .clear
-        return tf
+        let textField = UITextField()
+        textField.placeholder = "Select pet"
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
+        textField.tintColor = .clear
+        textField.inputView = petPicker
+        textField.inputAccessoryView = configureToolbar()
+        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
+        textField.rightViewMode = .always
+        return textField
     }()
     
     private lazy var categoryTextField: UITextField = {
-        let tf = makeTextField("Select category")
-        tf.inputView = categoryPicker
-        tf.tintColor = .clear
-        tf.text = selectedCategory
-        return tf
+        let textField = UITextField()
+        textField.placeholder = "Select category"
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
+        textField.tintColor = .clear
+        textField.inputView = categoryPicker
+        textField.inputAccessoryView = configureToolbar()
+        textField.text = selectedCategory
+        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
+        textField.rightViewMode = .always
+        return textField
     }()
     
     private lazy var dateTextField: UITextField = {
-        let tf = makeTextField("Select due date")
-        tf.inputView = datePicker
-        tf.tintColor = .clear
-        return tf
+        let textField = UITextField()
+        textField.placeholder = "Select due date"
+        textField.font = .systemFont(ofSize: 17, weight: .regular)
+        textField.backgroundColor = .systemGray6
+        textField.layer.cornerRadius = 18
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.systemGray5.cgColor
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.setLeftPadding(18)
+        textField.tintColor = .clear
+        textField.inputView = datePicker
+        textField.inputAccessoryView = configureToolbar()
+        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
+        textField.rightViewMode = .always
+        return textField
     }()
     
     private lazy var notesTextView: UITextView = {
@@ -185,11 +289,31 @@ final class AddReminderController: BaseController {
         return view
     }()
     
-    private lazy var statusView = StatusMessageView()
+    private lazy var statusView: StatusMessageView = {
+        let view = StatusMessageView()
+        return view
+    }()
     
-    private lazy var petChevron = makeTrailingIcon("chevron.down")
-    private lazy var categoryChevron = makeTrailingIcon("chevron.down")
-    private lazy var dateIcon = makeTrailingIcon("calendar")
+    private lazy var petChevron: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "chevron.down"))
+        imageView.tintColor = .systemGray3
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
+    private lazy var categoryChevron: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "chevron.down"))
+        imageView.tintColor = .systemGray3
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
+    private lazy var dateIcon: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "calendar"))
+        imageView.tintColor = .systemGray3
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
     
     private lazy var saveButton: UIButton = {
         let button = UIButton(type: .system)
@@ -199,7 +323,6 @@ final class AddReminderController: BaseController {
         button.backgroundColor = .mainBlue
         button.layer.cornerRadius = 18
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 58).isActive = true
         button.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         return button
     }()
@@ -215,14 +338,13 @@ final class AddReminderController: BaseController {
         return label
     }()
     
+    // MARK: - Lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        configurePickers()
-        configureDatePicker()
-        configureToolbars()
-        observeKeyboard()
-        applyModeIfNeeded()
-        updateDateText()
+        configureObservers()
+        configureMode()
+        configureDateText()
         viewModel.loadPets()
     }
     
@@ -238,52 +360,47 @@ final class AddReminderController: BaseController {
         scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
     
+    // MARK: - Configure
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         
-        contentView.addSubview(backButton)
-        contentView.addSubview(titleLabel)
-        contentView.addSubview(heroCard)
-        heroCard.addSubview(heroIconWrap)
+        [
+            backButton,
+            titleLabel,
+            heroCard,
+            formCard,
+            statusView,
+            saveButton,
+            helperLabel
+        ].forEach(contentView.addSubview)
+        
+        [
+            heroIconWrap,
+            heroTitleLabel,
+            heroSubtitleLabel
+        ].forEach(heroCard.addSubview)
+        
         heroIconWrap.addSubview(heroIcon)
-        heroCard.addSubview(heroTitleLabel)
-        heroCard.addSubview(heroSubtitleLabel)
         
-        contentView.addSubview(formCard)
-        
-        formCard.addSubview(titleFieldLabel)
-        formCard.addSubview(titleTextField)
-        
-        formCard.addSubview(petFieldLabel)
-        formCard.addSubview(petTextField)
-        formCard.addSubview(petChevron)
-        
-        formCard.addSubview(categoryFieldLabel)
-        formCard.addSubview(categoryTextField)
-        formCard.addSubview(categoryChevron)
-        
-        formCard.addSubview(dateFieldLabel)
-        formCard.addSubview(dateTextField)
-        formCard.addSubview(dateIcon)
-        
-        formCard.addSubview(notesFieldLabel)
-        formCard.addSubview(notesTextView)
-        
-        contentView.addSubview(statusView)
-        contentView.addSubview(saveButton)
-        contentView.addSubview(helperLabel)
-        
-        petTextField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
-        petTextField.rightViewMode = .always
-        
-        categoryTextField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
-        categoryTextField.rightViewMode = .always
-        
-        dateTextField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 36, height: 1))
-        dateTextField.rightViewMode = .always
+        [
+            titleFieldLabel,
+            titleTextField,
+            petFieldLabel,
+            petTextField,
+            petChevron,
+            categoryFieldLabel,
+            categoryTextField,
+            categoryChevron,
+            dateFieldLabel,
+            dateTextField,
+            dateIcon,
+            notesFieldLabel,
+            notesTextView
+        ].forEach(formCard.addSubview)
     }
     
     override func configureConstraints() {
@@ -301,11 +418,11 @@ final class AddReminderController: BaseController {
             
             backButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             backButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            backButton.widthAnchor.constraint(equalToConstant: 28),
-            backButton.heightAnchor.constraint(equalToConstant: 28),
             
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
+            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -20),
             
             heroCard.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 24),
             heroCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
@@ -397,6 +514,7 @@ final class AddReminderController: BaseController {
             saveButton.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 16),
             saveButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            saveButton.heightAnchor.constraint(equalToConstant: 58),
             
             helperLabel.topAnchor.constraint(equalTo: saveButton.bottomAnchor, constant: 12),
             helperLabel.leadingAnchor.constraint(equalTo: saveButton.leadingAnchor),
@@ -414,6 +532,7 @@ final class AddReminderController: BaseController {
         
         viewModel.onPetsLoaded = { [weak self] items in
             guard let self else { return }
+            
             self.petOptions = items
             self.petPicker.reloadAllComponents()
             
@@ -443,7 +562,7 @@ final class AddReminderController: BaseController {
         viewModel.onReminderSaved = { [weak self] _ in
             guard let self else { return }
             self.onReminderSaved?()
-            self.closeScreen()
+            self.configureCloseScreen()
         }
         
         viewModel.onError = { [weak self] message in
@@ -457,7 +576,7 @@ final class AddReminderController: BaseController {
         }
     }
     
-    private func applyModeIfNeeded() {
+    private func configureMode() {
         switch mode {
         case .create:
             titleLabel.text = "Add Reminder"
@@ -484,7 +603,7 @@ final class AddReminderController: BaseController {
                 
                 if let date = isoWithFraction.date(from: dueDateString) ?? iso.date(from: dueDateString) {
                     datePicker.date = date
-                    updateDateText()
+                    configureDateText()
                 }
             }
             
@@ -499,34 +618,28 @@ final class AddReminderController: BaseController {
         }
     }
     
-    private func configurePickers() {
-        petPicker.delegate = self
-        petPicker.dataSource = self
-        
-        categoryPicker.delegate = self
-        categoryPicker.dataSource = self
+    private func configureDateText() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy • h:mm a"
+        dateTextField.text = formatter.string(from: datePicker.date)
     }
     
-    private func configureDatePicker() {
-        datePicker.datePickerMode = .dateAndTime
-        datePicker.preferredDatePickerStyle = .wheels
-        
-        switch mode {
-        case .create:
-            datePicker.minimumDate = Date()
-        case .edit:
-            datePicker.minimumDate = nil
-        }
+    private func configureToolbar() -> UIToolbar {
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        toolbar.items = [
+            UIBarButtonItem.flexibleSpace(),
+            UIBarButtonItem(
+                title: "Done",
+                style: .prominent,
+                target: self,
+                action: #selector(doneTapped)
+            )
+        ]
+        return toolbar
     }
     
-    private func configureToolbars() {
-        let toolbar = makeToolbar()
-        petTextField.inputAccessoryView = toolbar
-        categoryTextField.inputAccessoryView = toolbar
-        dateTextField.inputAccessoryView = toolbar
-    }
-    
-    private func observeKeyboard() {
+    private func configureObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(keyboardWillShow),
@@ -542,53 +655,20 @@ final class AddReminderController: BaseController {
         )
     }
     
-    private func updateDateText() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy • h:mm a"
-        dateTextField.text = formatter.string(from: datePicker.date)
+    private func configureCloseScreen() {
+        if let navigationController, navigationController.viewControllers.first != self {
+            navigationController.popViewController(animated: true)
+        } else if navigationController?.presentingViewController != nil {
+            navigationController?.dismiss(animated: true)
+        } else if presentingViewController != nil {
+            dismiss(animated: true)
+        }
     }
     
-    private func makeToolbar() -> UIToolbar {
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        toolbar.items = [
-            UIBarButtonItem.flexibleSpace(),
-            UIBarButtonItem(title: "Done", style: .prominent, target: self, action: #selector(doneTapped))
-        ]
-        return toolbar
-    }
-    
-    private func makeFieldLabel(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
-        label.textColor = .onboardingBlack
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }
-    
-    private func makeTextField(_ placeholder: String) -> UITextField {
-        let tf = UITextField()
-        tf.placeholder = placeholder
-        tf.font = .systemFont(ofSize: 17, weight: .regular)
-        tf.backgroundColor = .systemGray6
-        tf.layer.cornerRadius = 18
-        tf.layer.borderWidth = 1
-        tf.layer.borderColor = UIColor.systemGray5.cgColor
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        tf.setLeftPadding(18)
-        return tf
-    }
-    
-    private func makeTrailingIcon(_ systemName: String) -> UIImageView {
-        let imageView = UIImageView(image: UIImage(systemName: systemName))
-        imageView.tintColor = .systemGray3
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        return imageView
-    }
+    // MARK: - Actions
     
     @objc private func backTapped() {
-        closeScreen()
+        configureCloseScreen()
     }
     
     @objc private func doneTapped() {
@@ -609,7 +689,7 @@ final class AddReminderController: BaseController {
         }
         
         if dateTextField.isFirstResponder {
-            updateDateText()
+            configureDateText()
         }
         
         view.endEditing(true)
@@ -638,16 +718,6 @@ final class AddReminderController: BaseController {
         }
     }
     
-    private func closeScreen() {
-        if let navigationController, navigationController.viewControllers.first != self {
-            navigationController.popViewController(animated: true)
-        } else if navigationController?.presentingViewController != nil {
-            navigationController?.dismiss(animated: true)
-        } else if presentingViewController != nil {
-            dismiss(animated: true)
-        }
-    }
-    
     @objc private func clearError() {
         viewModel.clearError()
         statusView.hide()
@@ -670,7 +740,10 @@ final class AddReminderController: BaseController {
 }
 
 extension AddReminderController: UIPickerViewDelegate, UIPickerViewDataSource {
-    func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
+    
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        1
+    }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if pickerView == petPicker {
