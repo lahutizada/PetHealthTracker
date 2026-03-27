@@ -14,8 +14,9 @@ final class VaccinationRecordsController: BaseController {
     private var isPetDropdownOpen = false
     private var currentData: VaccinationRecordsScreenViewData?
     
-    private var timelineTopToHeader: NSLayoutConstraint!
-    private var timelineTopToDropdown: NSLayoutConstraint!
+    private var petDropdownContainerHeightConstraint: NSLayoutConstraint!
+    private var contentBottomToTimelineConstraint: NSLayoutConstraint!
+    private var contentBottomToEmptyConstraint: NSLayoutConstraint!
     
     init(viewModel: VaccinationRecordsViewModelProtocol) {
         self.viewModel = viewModel
@@ -29,8 +30,6 @@ final class VaccinationRecordsController: BaseController {
     required init?(coder: NSCoder) {
         fatalError()
     }
-    
-    // MARK: - UI
     
     private lazy var scrollView: UIScrollView = {
         let view = UIScrollView()
@@ -71,11 +70,17 @@ final class VaccinationRecordsController: BaseController {
         return view
     }()
     
+    private lazy var petDropdownContainerView: UIView = {
+        let view = UIView()
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     private lazy var petDropdownStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 12
-        stack.isHidden = true
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -125,8 +130,6 @@ final class VaccinationRecordsController: BaseController {
         return label
     }()
     
-    // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         viewModel.load()
@@ -136,8 +139,6 @@ final class VaccinationRecordsController: BaseController {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
     }
-    
-    // MARK: - Configure
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -149,13 +150,15 @@ final class VaccinationRecordsController: BaseController {
             backButton,
             titleLabel,
             selectedPetHeaderView,
-            petDropdownStackView,
+            petDropdownContainerView,
             timelineTitleLabel,
             timelineSubtitleLabel,
             addRecordButton,
             timelineStackView,
             emptyStateLabel
         ].forEach(contentView.addSubview)
+        
+        petDropdownContainerView.addSubview(petDropdownStackView)
     }
     
     override func configureConstraints() {
@@ -183,10 +186,16 @@ final class VaccinationRecordsController: BaseController {
             selectedPetHeaderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             selectedPetHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             
-            petDropdownStackView.topAnchor.constraint(equalTo: selectedPetHeaderView.bottomAnchor, constant: 12),
-            petDropdownStackView.leadingAnchor.constraint(equalTo: selectedPetHeaderView.leadingAnchor),
-            petDropdownStackView.trailingAnchor.constraint(equalTo: selectedPetHeaderView.trailingAnchor),
+            petDropdownContainerView.topAnchor.constraint(equalTo: selectedPetHeaderView.bottomAnchor, constant: 12),
+            petDropdownContainerView.leadingAnchor.constraint(equalTo: selectedPetHeaderView.leadingAnchor),
+            petDropdownContainerView.trailingAnchor.constraint(equalTo: selectedPetHeaderView.trailingAnchor),
             
+            petDropdownStackView.topAnchor.constraint(equalTo: petDropdownContainerView.topAnchor),
+            petDropdownStackView.leadingAnchor.constraint(equalTo: petDropdownContainerView.leadingAnchor),
+            petDropdownStackView.trailingAnchor.constraint(equalTo: petDropdownContainerView.trailingAnchor),
+            petDropdownStackView.bottomAnchor.constraint(equalTo: petDropdownContainerView.bottomAnchor),
+            
+            timelineTitleLabel.topAnchor.constraint(equalTo: petDropdownContainerView.bottomAnchor, constant: 24),
             timelineTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             
             timelineSubtitleLabel.topAnchor.constraint(equalTo: timelineTitleLabel.bottomAnchor, constant: 6),
@@ -201,25 +210,27 @@ final class VaccinationRecordsController: BaseController {
             timelineStackView.topAnchor.constraint(equalTo: timelineSubtitleLabel.bottomAnchor, constant: 22),
             timelineStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             timelineStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            timelineStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40),
             
             emptyStateLabel.topAnchor.constraint(equalTo: timelineSubtitleLabel.bottomAnchor, constant: 30),
             emptyStateLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 32),
             emptyStateLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32)
         ])
         
-        timelineTopToHeader = timelineTitleLabel.topAnchor.constraint(
-            equalTo: selectedPetHeaderView.bottomAnchor,
-            constant: 24
+        petDropdownContainerHeightConstraint = petDropdownContainerView.heightAnchor.constraint(equalToConstant: 0)
+        petDropdownContainerHeightConstraint.isActive = true
+        
+        contentBottomToTimelineConstraint = contentView.bottomAnchor.constraint(
+            equalTo: timelineStackView.bottomAnchor,
+            constant: 40
         )
         
-        timelineTopToDropdown = timelineTitleLabel.topAnchor.constraint(
-            equalTo: petDropdownStackView.bottomAnchor,
-            constant: 24
+        contentBottomToEmptyConstraint = contentView.bottomAnchor.constraint(
+            equalTo: emptyStateLabel.bottomAnchor,
+            constant: 40
         )
         
-        timelineTopToHeader.isActive = true
-        timelineTopToDropdown.isActive = false
+        contentBottomToTimelineConstraint.isActive = true
+        contentBottomToEmptyConstraint.isActive = false
     }
     
     override func configureViewModel() {
@@ -231,8 +242,6 @@ final class VaccinationRecordsController: BaseController {
             self?.configureRecordAction(raw)
         }
     }
-    
-    // MARK: - Data
     
     private func configureData(_ data: VaccinationRecordsScreenViewData) {
         currentData = data
@@ -279,6 +288,10 @@ final class VaccinationRecordsController: BaseController {
             timelineStackView.addArrangedSubview(card)
         }
         
+        contentBottomToTimelineConstraint.isActive = !data.items.isEmpty
+        contentBottomToEmptyConstraint.isActive = data.items.isEmpty
+        
+        configurePetDropdownLayout()
         view.layoutIfNeeded()
     }
     
@@ -384,7 +397,21 @@ final class VaccinationRecordsController: BaseController {
         present(alert, animated: true)
     }
     
-    // MARK: - Actions
+    private func configurePetDropdownLayout() {
+        let itemHeight: CGFloat = 78
+        let spacing: CGFloat = 12
+        let count = CGFloat(petDropdownStackView.arrangedSubviews.count)
+        
+        let targetHeight: CGFloat
+        if isPetDropdownOpen, count > 0 {
+            targetHeight = (count * itemHeight) + ((count - 1) * spacing)
+        } else {
+            targetHeight = 0
+        }
+        
+        petDropdownContainerHeightConstraint.constant = targetHeight
+        petDropdownContainerView.alpha = isPetDropdownOpen ? 1 : 0
+    }
     
     private func togglePetDropdown(closeOnly: Bool = false) {
         if closeOnly {
@@ -393,10 +420,7 @@ final class VaccinationRecordsController: BaseController {
             isPetDropdownOpen.toggle()
         }
         
-        petDropdownStackView.isHidden = !isPetDropdownOpen
-        
-        timelineTopToHeader.isActive = !isPetDropdownOpen
-        timelineTopToDropdown.isActive = isPetDropdownOpen
+        configurePetDropdownLayout()
         
         UIView.animate(withDuration: 0.25) {
             self.view.layoutIfNeeded()

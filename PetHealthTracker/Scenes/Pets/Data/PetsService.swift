@@ -11,7 +11,7 @@ final class PetsService: PetsServicing {
     
     static let shared = PetsService()
     
-    private let baseURL = "http://localhost:3000"
+    private let baseURL = "http://192.168.1.68:3000"
     
     private init() {}
     
@@ -70,7 +70,7 @@ final class PetsService: PetsServicing {
     }
     
     func uploadPetPhoto(petId: String, image: UIImage) async throws -> PetResponse {
-        guard let url = URL(string: baseURL + "/pets/\(petId)/photo") else {
+        guard let url = URL(string: "\(baseURL)/pets/\(petId)/photo") else {
             throw URLError(.badURL)
         }
         
@@ -126,5 +126,4 @@ final class PetsService: PetsServicing {
             requiresAuth: true
         )
     }
-    
 }

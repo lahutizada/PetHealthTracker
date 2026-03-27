@@ -5,13 +5,6 @@
 //  Created by Ruslan Lahutizada on 23.03.26.
 //
 
-//
-//  DewormingRecordsController.swift
-//  PetHealthTracker
-//
-//  Created by Ruslan Lahutizada on 23.03.26.
-//
-
 import UIKit
 
 final class DewormingRecordsController: BaseController {
@@ -21,8 +14,7 @@ final class DewormingRecordsController: BaseController {
     private var isPetDropdownOpen = false
     private var currentData: DewormingRecordsScreenViewData?
     
-    private var timelineTopToHeader: NSLayoutConstraint!
-    private var timelineTopToDropdown: NSLayoutConstraint!
+    private var petDropdownContainerHeightConstraint: NSLayoutConstraint!
     private var contentBottomToTimelineConstraint: NSLayoutConstraint!
     private var contentBottomToEmptyConstraint: NSLayoutConstraint!
     
@@ -80,11 +72,17 @@ final class DewormingRecordsController: BaseController {
         return view
     }()
     
+    private lazy var petDropdownContainerView: UIView = {
+        let view = UIView()
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     private lazy var petDropdownStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 12
-        stack.isHidden = true
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -158,13 +156,15 @@ final class DewormingRecordsController: BaseController {
             backButton,
             titleLabel,
             selectedPetHeaderView,
-            petDropdownStackView,
+            petDropdownContainerView,
             timelineTitleLabel,
             timelineSubtitleLabel,
             addRecordButton,
             timelineStackView,
             emptyStateLabel
         ].forEach(contentView.addSubview)
+        
+        petDropdownContainerView.addSubview(petDropdownStackView)
     }
     
     override func configureConstraints() {
@@ -192,10 +192,16 @@ final class DewormingRecordsController: BaseController {
             selectedPetHeaderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             selectedPetHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             
-            petDropdownStackView.topAnchor.constraint(equalTo: selectedPetHeaderView.bottomAnchor, constant: 12),
-            petDropdownStackView.leadingAnchor.constraint(equalTo: selectedPetHeaderView.leadingAnchor),
-            petDropdownStackView.trailingAnchor.constraint(equalTo: selectedPetHeaderView.trailingAnchor),
+            petDropdownContainerView.topAnchor.constraint(equalTo: selectedPetHeaderView.bottomAnchor, constant: 12),
+            petDropdownContainerView.leadingAnchor.constraint(equalTo: selectedPetHeaderView.leadingAnchor),
+            petDropdownContainerView.trailingAnchor.constraint(equalTo: selectedPetHeaderView.trailingAnchor),
             
+            petDropdownStackView.topAnchor.constraint(equalTo: petDropdownContainerView.topAnchor),
+            petDropdownStackView.leadingAnchor.constraint(equalTo: petDropdownContainerView.leadingAnchor),
+            petDropdownStackView.trailingAnchor.constraint(equalTo: petDropdownContainerView.trailingAnchor),
+            petDropdownStackView.bottomAnchor.constraint(equalTo: petDropdownContainerView.bottomAnchor),
+            
+            timelineTitleLabel.topAnchor.constraint(equalTo: petDropdownContainerView.bottomAnchor, constant: 24),
             timelineTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             
             timelineSubtitleLabel.topAnchor.constraint(equalTo: timelineTitleLabel.bottomAnchor, constant: 6),
@@ -216,18 +222,8 @@ final class DewormingRecordsController: BaseController {
             emptyStateLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32)
         ])
         
-        timelineTopToHeader = timelineTitleLabel.topAnchor.constraint(
-            equalTo: selectedPetHeaderView.bottomAnchor,
-            constant: 24
-        )
-        
-        timelineTopToDropdown = timelineTitleLabel.topAnchor.constraint(
-            equalTo: petDropdownStackView.bottomAnchor,
-            constant: 24
-        )
-        
-        timelineTopToHeader.isActive = true
-        timelineTopToDropdown.isActive = false
+        petDropdownContainerHeightConstraint = petDropdownContainerView.heightAnchor.constraint(equalToConstant: 0)
+        petDropdownContainerHeightConstraint.isActive = true
         
         contentBottomToTimelineConstraint = contentView.bottomAnchor.constraint(
             equalTo: timelineStackView.bottomAnchor,
@@ -304,6 +300,7 @@ final class DewormingRecordsController: BaseController {
         contentBottomToTimelineConstraint.isActive = !isEmpty
         contentBottomToEmptyConstraint.isActive = isEmpty
         
+        configurePetDropdownLayout()
         view.layoutIfNeeded()
     }
     
@@ -407,6 +404,24 @@ final class DewormingRecordsController: BaseController {
         present(alert, animated: true)
     }
     
+    // MARK: - Helpers
+    
+    private func configurePetDropdownLayout() {
+        let itemHeight: CGFloat = 78
+        let spacing: CGFloat = 12
+        let count = CGFloat(petDropdownStackView.arrangedSubviews.count)
+        
+        let targetHeight: CGFloat
+        if isPetDropdownOpen, count > 0 {
+            targetHeight = (count * itemHeight) + ((count - 1) * spacing)
+        } else {
+            targetHeight = 0
+        }
+        
+        petDropdownContainerHeightConstraint.constant = targetHeight
+        petDropdownContainerView.alpha = isPetDropdownOpen ? 1 : 0
+    }
+    
     // MARK: - Actions
     
     private func togglePetDropdown(closeOnly: Bool = false) {
@@ -416,10 +431,7 @@ final class DewormingRecordsController: BaseController {
             isPetDropdownOpen.toggle()
         }
         
-        petDropdownStackView.isHidden = !isPetDropdownOpen
-        
-        timelineTopToHeader.isActive = !isPetDropdownOpen
-        timelineTopToDropdown.isActive = isPetDropdownOpen
+        configurePetDropdownLayout()
         
         UIView.animate(withDuration: 0.25) {
             self.view.layoutIfNeeded()

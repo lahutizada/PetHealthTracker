@@ -333,6 +333,7 @@ final class PetDetailsController: BaseController {
         ])
         stack.axis = .horizontal
         stack.spacing = 14
+        stack.alignment = .top
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()

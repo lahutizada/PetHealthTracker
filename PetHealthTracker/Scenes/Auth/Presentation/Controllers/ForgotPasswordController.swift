@@ -217,12 +217,12 @@ final class ForgotPasswordController: BaseController {
             heroContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             heroContainer.heightAnchor.constraint(equalToConstant: heroHeight),
             
-            heroImageView.topAnchor.constraint(equalTo: heroContainer.topAnchor, constant: -80),
+            heroImageView.topAnchor.constraint(equalTo: heroContainer.topAnchor, constant: -160),
             heroImageView.leadingAnchor.constraint(equalTo: heroContainer.leadingAnchor),
             heroImageView.trailingAnchor.constraint(equalTo: heroContainer.trailingAnchor),
             heroImageView.bottomAnchor.constraint(equalTo: heroContainer.bottomAnchor, constant: 80),
             
-            bottomContainer.topAnchor.constraint(equalTo: heroContainer.bottomAnchor, constant: -90),
+            bottomContainer.topAnchor.constraint(equalTo: heroContainer.bottomAnchor, constant: -120),
             bottomContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             bottomContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             bottomContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
