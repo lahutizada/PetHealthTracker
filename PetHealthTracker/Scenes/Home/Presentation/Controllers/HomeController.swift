@@ -396,7 +396,6 @@ final class HomeController: BaseController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -404,6 +403,10 @@ final class HomeController: BaseController {
         navigationController?.setNavigationBarHidden(true, animated: false)
         navigationItem.hidesBackButton = true
         viewModel.loadHome()
+    }
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
     }
     
     override func configureUI() {
@@ -502,15 +505,6 @@ final class HomeController: BaseController {
         viewModel.onError = { error in
             print("Home error:", error)
         }
-    }
-    
-    private func configureObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(reloadHomeFromNotification),
-            name: .highlightedPetChanged,
-            object: nil
-        )
     }
     
     private func configureData(_ viewData: HomeViewData) {

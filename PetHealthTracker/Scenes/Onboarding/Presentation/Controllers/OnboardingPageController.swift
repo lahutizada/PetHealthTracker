@@ -5,13 +5,6 @@
 //  Created by Ruslan Lahutizada on 05.03.26.
 //
 
-//
-//  OnboardingPageController.swift
-//  PetHealthTracker
-//
-//  Created by Ruslan Lahutizada on 05.03.26.
-//
-
 import UIKit
 
 final class OnboardingPageController: BaseController {

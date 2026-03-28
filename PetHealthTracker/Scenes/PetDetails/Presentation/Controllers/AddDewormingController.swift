@@ -150,6 +150,10 @@ final class AddDewormingController: BaseController {
         ])
     }
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     private func makePickerContainer(_ picker: UIDatePicker) -> UIView {
         let container = UIView()
         container.backgroundColor = .white

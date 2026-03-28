@@ -5,13 +5,6 @@
 //  Created by Ruslan Lahutizada on 09.03.26.
 //
 
-//
-//  ProfileController.swift
-//  PetHealthTracker
-//
-//  Created by Ruslan Lahutizada on 09.03.26.
-//
-
 import UIKit
 import PhotosUI
 
@@ -244,6 +237,10 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
     }
     
     // MARK: - BaseController
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground

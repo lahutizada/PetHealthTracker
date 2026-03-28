@@ -115,20 +115,40 @@ final class ResetPasswordController: BaseController {
         return label
     }()
     
+    private lazy var passwordContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemGray6
+        view.layer.cornerRadius = 18
+        view.layer.borderWidth = 1
+        view.layer.borderColor = UIColor.systemGray5.cgColor
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     private lazy var passwordTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Enter new password"
         textField.borderStyle = .none
         textField.font = .systemFont(ofSize: 17, weight: .regular)
-        textField.backgroundColor = .systemGray6
-        textField.layer.cornerRadius = 18
-        textField.layer.borderWidth = 1
-        textField.layer.borderColor = UIColor.systemGray5.cgColor
+        textField.backgroundColor = .clear
         textField.isSecureTextEntry = true
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.setLeftPadding(18)
         textField.addTarget(self, action: #selector(clearStatus), for: .editingChanged)
         return textField
+    }()
+    
+    private lazy var showPasswordButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        button.setPreferredSymbolConfiguration(config, forImageIn: .normal)
+        button.setImage(UIImage(systemName: "eye"), for: .normal)
+        button.tintColor = .onboardingGray
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.imageView?.contentMode = .scaleAspectFit
+        button.widthAnchor.constraint(equalToConstant: 24).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        button.addTarget(self, action: #selector(togglePasswordVisibility), for: .touchUpInside)
+        return button
     }()
     
     private lazy var confirmPasswordTextField: UITextField = {
@@ -178,7 +198,6 @@ final class ResetPasswordController: BaseController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -187,6 +206,10 @@ final class ResetPasswordController: BaseController {
     }
     
     // MARK: - BaseController
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -206,13 +229,16 @@ final class ResetPasswordController: BaseController {
         
         [
             passwordTitleLabel,
-            passwordTextField,
+            passwordContainer,
             confirmPasswordTitleLabel,
             confirmPasswordTextField,
             statusView,
             hintLabel,
             resetButton
         ].forEach(formCard.addSubview)
+        
+        passwordContainer.addSubview(passwordTextField)
+        passwordContainer.addSubview(showPasswordButton)
     }
     
     override func configureConstraints() {
@@ -258,31 +284,38 @@ final class ResetPasswordController: BaseController {
             passwordTitleLabel.leadingAnchor.constraint(equalTo: formCard.leadingAnchor, constant: 20),
             passwordTitleLabel.trailingAnchor.constraint(equalTo: formCard.trailingAnchor, constant: -20),
             
-            passwordTextField.topAnchor.constraint(equalTo: passwordTitleLabel.bottomAnchor, constant: 10),
-            passwordTextField.leadingAnchor.constraint(equalTo: formCard.leadingAnchor, constant: 20),
-            passwordTextField.trailingAnchor.constraint(equalTo: formCard.trailingAnchor, constant: -20),
-            passwordTextField.heightAnchor.constraint(equalToConstant: 56),
+            passwordContainer.topAnchor.constraint(equalTo: passwordTitleLabel.bottomAnchor, constant: 10),
+            passwordContainer.leadingAnchor.constraint(equalTo: formCard.leadingAnchor, constant: 20),
+            passwordContainer.trailingAnchor.constraint(equalTo: formCard.trailingAnchor, constant: -20),
+            passwordContainer.heightAnchor.constraint(equalToConstant: 56),
             
-            confirmPasswordTitleLabel.topAnchor.constraint(equalTo: passwordTextField.bottomAnchor, constant: 20),
-            confirmPasswordTitleLabel.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
-            confirmPasswordTitleLabel.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            passwordTextField.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor, constant: 18),
+            passwordTextField.trailingAnchor.constraint(equalTo: showPasswordButton.leadingAnchor, constant: -10),
+            passwordTextField.centerYAnchor.constraint(equalTo: passwordContainer.centerYAnchor),
+            
+            showPasswordButton.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor, constant: -16),
+            showPasswordButton.centerYAnchor.constraint(equalTo: passwordContainer.centerYAnchor),
+            
+            confirmPasswordTitleLabel.topAnchor.constraint(equalTo: passwordContainer.bottomAnchor, constant: 20),
+            confirmPasswordTitleLabel.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            confirmPasswordTitleLabel.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
             
             confirmPasswordTextField.topAnchor.constraint(equalTo: confirmPasswordTitleLabel.bottomAnchor, constant: 10),
-            confirmPasswordTextField.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
-            confirmPasswordTextField.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            confirmPasswordTextField.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            confirmPasswordTextField.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
             confirmPasswordTextField.heightAnchor.constraint(equalToConstant: 56),
             
             statusView.topAnchor.constraint(equalTo: confirmPasswordTextField.bottomAnchor, constant: 18),
-            statusView.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
-            statusView.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            statusView.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            statusView.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
             
             hintLabel.topAnchor.constraint(equalTo: statusView.bottomAnchor, constant: 14),
-            hintLabel.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
-            hintLabel.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            hintLabel.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            hintLabel.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
             
             resetButton.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 22),
-            resetButton.leadingAnchor.constraint(equalTo: passwordTextField.leadingAnchor),
-            resetButton.trailingAnchor.constraint(equalTo: passwordTextField.trailingAnchor),
+            resetButton.leadingAnchor.constraint(equalTo: passwordContainer.leadingAnchor),
+            resetButton.trailingAnchor.constraint(equalTo: passwordContainer.trailingAnchor),
             resetButton.heightAnchor.constraint(equalToConstant: 58),
             resetButton.bottomAnchor.constraint(equalTo: formCard.bottomAnchor, constant: -24)
         ])
@@ -325,24 +358,6 @@ final class ResetPasswordController: BaseController {
         }
     }
     
-    // MARK: - Configure
-    
-    private func configureObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
-    
     // MARK: - Actions
     
     @objc private func backTapped() {
@@ -366,18 +381,26 @@ final class ResetPasswordController: BaseController {
         statusView.hide()
     }
     
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-        else { return }
+    @objc private func togglePasswordVisibility() {
+        let shouldShowPassword = passwordTextField.isSecureTextEntry
         
-        scrollView.contentInset.bottom = keyboardFrame.height + 24
-        scrollView.verticalScrollIndicatorInsets.bottom = keyboardFrame.height + 24
-    }
-    
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
+        passwordTextField.isSecureTextEntry = !shouldShowPassword
+        confirmPasswordTextField.isSecureTextEntry = !shouldShowPassword
+        
+        let imageName = shouldShowPassword ? "eye.slash" : "eye"
+        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        let image = UIImage(systemName: imageName, withConfiguration: config)
+        
+        showPasswordButton.setImage(image, for: .normal)
+        
+        if let password = passwordTextField.text, passwordTextField.isFirstResponder {
+            passwordTextField.text = ""
+            passwordTextField.insertText(password)
+        }
+        
+        if let confirmPassword = confirmPasswordTextField.text, confirmPasswordTextField.isFirstResponder {
+            confirmPasswordTextField.text = ""
+            confirmPasswordTextField.insertText(confirmPassword)
+        }
     }
 }

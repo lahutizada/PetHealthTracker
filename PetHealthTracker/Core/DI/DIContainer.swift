@@ -74,6 +74,10 @@ final class DIContainer {
         UploadPetPhotoUseCase(petsService: petsService)
     }
     
+    func makeGoogleLoginUseCase() -> GoogleLoginUseCaseProtocol {
+        GoogleLoginUseCase(authService: authService)
+    }
+    
     // MARK: - Home UseCases
     
     func makeGetHomeDataUseCase() -> GetHomeDataUseCaseProtocol {
@@ -86,11 +90,17 @@ final class DIContainer {
     // MARK: - ViewModels
     
     func makeLoginViewModel() -> LoginViewModelProtocol {
-        LoginViewModel(loginUseCase: makeLoginUseCase())
+        LoginViewModel(
+            loginUseCase: makeLoginUseCase(),
+            googleLoginUseCase: makeGoogleLoginUseCase()
+        )
     }
     
     func makeRegisterViewModel() -> RegisterViewModelProtocol {
-        RegisterViewModel(registerUseCase: makeRegisterUseCase())
+        RegisterViewModel(
+            registerUseCase: makeRegisterUseCase(),
+            googleLoginUseCase: makeGoogleLoginUseCase()
+        )
     }
     
     func makeForgotPasswordViewModel() -> ForgotPasswordViewModelProtocol {
@@ -147,4 +157,5 @@ final class DIContainer {
     func makeAddReminderViewModel() -> AddReminderViewModelProtocol {
         AddReminderViewModel()
     }
+    
 }

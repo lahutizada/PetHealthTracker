@@ -13,6 +13,7 @@ protocol RegisterViewModelProtocol: AnyObject {
     var onRegisterSuccess: (() -> Void)? { get set }
 
     func register(name: String?, email: String?, password: String?, confirmPassword: String?)
+    func registerWithGoogle(idToken: String)
     func clearError()
 }
 
@@ -23,9 +24,14 @@ final class RegisterViewModel: RegisterViewModelProtocol {
     var onRegisterSuccess: (() -> Void)?
 
     private let registerUseCase: RegisterUseCaseProtocol
+    private let googleLoginUseCase: GoogleLoginUseCaseProtocol
 
-    init(registerUseCase: RegisterUseCaseProtocol = RegisterUseCase()) {
+    init(
+        registerUseCase: RegisterUseCaseProtocol = RegisterUseCase(),
+        googleLoginUseCase: GoogleLoginUseCaseProtocol = GoogleLoginUseCase()
+    ) {
         self.registerUseCase = registerUseCase
+        self.googleLoginUseCase = googleLoginUseCase
     }
 
     func register(name: String?, email: String?, password: String?, confirmPassword: String?) {
@@ -65,6 +71,32 @@ final class RegisterViewModel: RegisterViewModelProtocol {
                     email: cleanEmail,
                     password: cleanPassword
                 )
+
+                SessionManager.shared.saveTokens(
+                    accessToken: response.accessToken,
+                    refreshToken: response.refreshToken
+                )
+
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onRegisterSuccess?()
+                }
+            } catch {
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onError?(AuthErrorAdapter.message(from: error))
+                }
+            }
+        }
+    }
+
+    func registerWithGoogle(idToken: String) {
+        clearError()
+        onLoadingStateChanged?(true)
+
+        Task {
+            do {
+                let response = try await googleLoginUseCase.execute(idToken: idToken)
 
                 SessionManager.shared.saveTokens(
                     accessToken: response.accessToken,

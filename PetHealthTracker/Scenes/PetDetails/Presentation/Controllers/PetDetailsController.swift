@@ -450,6 +450,10 @@ final class PetDetailsController: BaseController {
     
     // MARK: - Configure
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         navigationController?.setNavigationBarHidden(true, animated: false)

@@ -142,7 +142,7 @@ final class AddReminderController: BaseController {
     
     private lazy var heroSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Set reminders for vet visits, vaccines, deworming and more."
+        label.text = "Set reminders for vet visits, vaccines, \ndeworming and more."
         label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = .onboardingGray
         label.numberOfLines = 0
@@ -342,7 +342,6 @@ final class AddReminderController: BaseController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureObservers()
         configureMode()
         configureDateText()
         viewModel.loadPets()
@@ -361,6 +360,10 @@ final class AddReminderController: BaseController {
     }
     
     // MARK: - Configure
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -581,7 +584,7 @@ final class AddReminderController: BaseController {
         case .create:
             titleLabel.text = "Add Reminder"
             heroTitleLabel.text = "Create a new task"
-            heroSubtitleLabel.text = "Set reminders for vet visits, vaccines, deworming and more."
+            heroSubtitleLabel.text = "Set reminders for vet visits, vaccines, \ndeworming and more."
             saveButton.setTitle("Save Reminder", for: .normal)
             categoryTextField.text = selectedCategory
             
@@ -637,22 +640,6 @@ final class AddReminderController: BaseController {
             )
         ]
         return toolbar
-    }
-    
-    private func configureObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
     }
     
     private func configureCloseScreen() {
@@ -721,21 +708,6 @@ final class AddReminderController: BaseController {
     @objc private func clearError() {
         viewModel.clearError()
         statusView.hide()
-    }
-    
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-        else { return }
-        
-        scrollView.contentInset.bottom = keyboardFrame.height + 24
-        scrollView.verticalScrollIndicatorInsets.bottom = keyboardFrame.height + 24
-    }
-    
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
 }
 

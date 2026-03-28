@@ -13,6 +13,7 @@ protocol LoginViewModelProtocol: AnyObject {
     var onLoginSuccess: (() -> Void)? { get set }
 
     func login(email: String?, password: String?)
+    func loginWithGoogle(idToken: String)
     func clearError()
 }
 
@@ -23,9 +24,14 @@ final class LoginViewModel: LoginViewModelProtocol {
     var onLoginSuccess: (() -> Void)?
 
     private let loginUseCase: LoginUseCaseProtocol
+    private let googleLoginUseCase: GoogleLoginUseCaseProtocol
 
-    init(loginUseCase: LoginUseCaseProtocol = LoginUseCase()) {
+    init(
+        loginUseCase: LoginUseCaseProtocol = LoginUseCase(),
+        googleLoginUseCase: GoogleLoginUseCaseProtocol = GoogleLoginUseCase()
+    ) {
         self.loginUseCase = loginUseCase
+        self.googleLoginUseCase = googleLoginUseCase
     }
 
     func login(email: String?, password: String?) {
@@ -52,6 +58,32 @@ final class LoginViewModel: LoginViewModelProtocol {
                     email: cleanEmail,
                     password: cleanPassword
                 )
+
+                SessionManager.shared.saveTokens(
+                    accessToken: response.accessToken,
+                    refreshToken: response.refreshToken
+                )
+
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onLoginSuccess?()
+                }
+            } catch {
+                await MainActor.run {
+                    self.onLoadingStateChanged?(false)
+                    self.onError?(AuthErrorAdapter.message(from: error))
+                }
+            }
+        }
+    }
+
+    func loginWithGoogle(idToken: String) {
+        clearError()
+        onLoadingStateChanged?(true)
+
+        Task {
+            do {
+                let response = try await googleLoginUseCase.execute(idToken: idToken)
 
                 SessionManager.shared.saveTokens(
                     accessToken: response.accessToken,

@@ -177,6 +177,10 @@ final class ForgotPasswordController: BaseController {
     
     // MARK: - BaseController
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         

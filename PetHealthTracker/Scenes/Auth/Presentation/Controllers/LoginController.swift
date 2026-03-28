@@ -7,6 +7,7 @@
 
 import UIKit
 import AuthenticationServices
+import GoogleSignIn
 
 final class LoginController: BaseController {
 
@@ -282,7 +283,45 @@ final class LoginController: BaseController {
     // MARK: - Actions
 
     @objc private func handleGoogleLogin() {
-        statusView.show(message: "Google Sign-In coming soon.", style: .info)
+        clearError()
+        
+        guard let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String else {
+            statusView.show(message: "Google Client ID not found", style: .error)
+            return
+        }
+        
+        let serverClientID = Bundle.main.object(forInfoDictionaryKey: "GIDServerClientID") as? String
+        
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: clientID,
+            serverClientID: serverClientID
+        )
+        
+        guard let presentingViewController = view.window?.rootViewController else {
+            statusView.show(message: "Unable to start Google Sign-In", style: .error)
+            return
+        }
+        
+        Task {
+            do {
+                let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController)
+                
+                guard let idToken = result.user.idToken?.tokenString else {
+                    await MainActor.run {
+                        self.statusView.show(message: "Failed to get Google token", style: .error)
+                    }
+                    return
+                }
+                
+                await MainActor.run {
+                    self.viewModel.loginWithGoogle(idToken: idToken)
+                }
+            } catch {
+                await MainActor.run {
+                    self.statusView.show(message: error.localizedDescription, style: .error)
+                }
+            }
+        }
     }
 
     @objc private func openRegister() {
@@ -329,6 +368,10 @@ final class LoginController: BaseController {
     }
 
     // MARK: - BaseController
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
 
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -443,6 +486,7 @@ final class LoginController: BaseController {
             appleButton.topAnchor.constraint(equalTo: orLabel.bottomAnchor, constant: 22),
             appleButton.leadingAnchor.constraint(equalTo: emailTextField.leadingAnchor),
             appleButton.trailingAnchor.constraint(equalTo: emailTextField.trailingAnchor),
+            appleButton.widthAnchor.constraint(lessThanOrEqualToConstant: 375),
 
             googleButton.topAnchor.constraint(equalTo: appleButton.bottomAnchor, constant: 14),
             googleButton.leadingAnchor.constraint(equalTo: appleButton.leadingAnchor),
@@ -457,7 +501,7 @@ final class LoginController: BaseController {
             signUpButtonLink.bottomAnchor.constraint(equalTo: bottomContainer.safeAreaLayoutGuide.bottomAnchor, constant: -24)
         ])
     }
-
+    
     override func configureViewModel() {
         viewModel.onError = { [weak self] message in
             guard let self else { return }

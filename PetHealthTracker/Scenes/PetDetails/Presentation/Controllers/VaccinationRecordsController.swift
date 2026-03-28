@@ -140,6 +140,10 @@ final class VaccinationRecordsController: BaseController {
         navigationController?.setNavigationBarHidden(true, animated: false)
     }
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         

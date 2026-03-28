@@ -7,6 +7,7 @@
 
 import UIKit
 import AuthenticationServices
+import GoogleSignIn
 
 final class RegisterController: BaseController {
     
@@ -340,6 +341,10 @@ final class RegisterController: BaseController {
     
     // MARK: - BaseController
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         
@@ -496,6 +501,7 @@ final class RegisterController: BaseController {
             appleButton.topAnchor.constraint(equalTo: orLabel.bottomAnchor, constant: 24),
             appleButton.leadingAnchor.constraint(equalTo: bottomContainer.centerXAnchor, constant: 8),
             appleButton.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            appleButton.widthAnchor.constraint(lessThanOrEqualToConstant: 180),
             
             loginPromptLabel.topAnchor.constraint(equalTo: googleButton.bottomAnchor, constant: 28),
             loginPromptLabel.centerXAnchor.constraint(equalTo: bottomContainer.centerXAnchor, constant: -34),
@@ -560,7 +566,45 @@ final class RegisterController: BaseController {
     }
     
     @objc private func handleGoogleLogin() {
-        statusView.show(message: "Google Sign-In coming soon.", style: .info)
+        clearError()
+        
+        guard let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String else {
+            statusView.show(message: "Google Client ID not found", style: .error)
+            return
+        }
+        
+        let serverClientID = Bundle.main.object(forInfoDictionaryKey: "GIDServerClientID") as? String
+        
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: clientID,
+            serverClientID: serverClientID
+        )
+        
+        guard let presentingViewController = view.window?.rootViewController else {
+            statusView.show(message: "Unable to start Google Sign-In", style: .error)
+            return
+        }
+        
+        Task {
+            do {
+                let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController)
+                
+                guard let idToken = result.user.idToken?.tokenString else {
+                    await MainActor.run {
+                        self.statusView.show(message: "Failed to get Google token", style: .error)
+                    }
+                    return
+                }
+                
+                await MainActor.run {
+                    self.viewModel.registerWithGoogle(idToken: idToken)
+                }
+            } catch {
+                await MainActor.run {
+                    self.statusView.show(message: error.localizedDescription, style: .error)
+                }
+            }
+        }
     }
     
     @objc private func backToLogin() {

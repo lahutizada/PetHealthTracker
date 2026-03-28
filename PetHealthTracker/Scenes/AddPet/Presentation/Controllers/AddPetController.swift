@@ -277,7 +277,6 @@ final class AddPetController: BaseController {
         configurePickers()
         configureDatePicker()
         configureToolbars()
-        observeKeyboard()
         applyModeIfNeeded()
     }
     
@@ -291,6 +290,10 @@ final class AddPetController: BaseController {
         super.viewWillDisappear(animated)
         scrollView.contentInset.bottom = 0
         scrollView.verticalScrollIndicatorInsets.bottom = 0
+    }
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
     }
     
     override func configureUI() {
@@ -496,22 +499,7 @@ final class AddPetController: BaseController {
         birthDateTextField.inputAccessoryView = makeToolbar()
         birthDateTextField.inputView = datePicker
     }
-    
-    private func observeKeyboard() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
+
     
     private func applyModeIfNeeded() {
         shouldRemovePhoto = false
@@ -771,21 +759,6 @@ final class AddPetController: BaseController {
     @objc private func clearError() {
         viewModel.clearError()
         statusView.hide()
-    }
-    
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-        else { return }
-        
-        scrollView.contentInset.bottom = keyboardFrame.height + 32
-        scrollView.verticalScrollIndicatorInsets.bottom = keyboardFrame.height + 32
-    }
-    
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
     
     private func formattedISODate() -> String {

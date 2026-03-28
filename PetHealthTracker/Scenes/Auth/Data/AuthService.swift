@@ -35,6 +35,18 @@ final class AuthService: AuthServicing {
         )
     }
 
+    func googleAuth(idToken: String) async throws -> AuthResponse {
+        let body = try JSONEncoder().encode(
+            GoogleAuthRequest(idToken: idToken)
+        )
+
+        return try await APIClient.shared.request(
+            endpoint: "/auth/google",
+            method: "POST",
+            body: body
+        )
+    }
+
     func me() async throws -> UserResponse {
         try await APIClient.shared.request(
             endpoint: "/auth/me",

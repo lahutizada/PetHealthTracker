@@ -146,6 +146,10 @@ final class DewormingRecordsController: BaseController {
     
     // MARK: - Configure
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
         

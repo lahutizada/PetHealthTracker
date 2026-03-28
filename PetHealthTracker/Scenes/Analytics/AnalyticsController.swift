@@ -22,4 +22,5 @@ final class AnalyticsController: BaseController {
     
     override func configureConstraints() {}
     override func configureViewModel() {}
+    
 }

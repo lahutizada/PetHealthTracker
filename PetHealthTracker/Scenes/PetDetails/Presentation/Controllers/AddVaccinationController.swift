@@ -80,6 +80,10 @@ final class AddVaccinationController: BaseController {
         super.viewWillDisappear(animated)
     }
     
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
+    
     // MARK: - Setup
     
     private func setupUI() {

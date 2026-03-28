@@ -219,7 +219,6 @@ final class EditProfileController: BaseController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureAvatar()
-        configureObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -234,6 +233,10 @@ final class EditProfileController: BaseController {
     }
     
     // MARK: - Configure
+    
+    override var keyboardScrollView: UIScrollView? {
+        scrollView
+    }
     
     override func configureUI() {
         view.backgroundColor = .systemGroupedBackground
@@ -435,22 +438,6 @@ final class EditProfileController: BaseController {
         return parts.isEmpty ? "U" : parts.joined()
     }
     
-    private func configureObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
-    
     // MARK: - Actions
     
     @objc private func backTapped() {
@@ -464,20 +451,5 @@ final class EditProfileController: BaseController {
     @objc private func clearStatus() {
         viewModel.clearMessages()
         statusView.hide()
-    }
-    
-    @objc private func keyboardWillShow(_ notification: Notification) {
-        guard
-            let userInfo = notification.userInfo,
-            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-        else { return }
-        
-        scrollView.contentInset.bottom = keyboardFrame.height + 24
-        scrollView.verticalScrollIndicatorInsets.bottom = keyboardFrame.height + 24
-    }
-    
-    @objc private func keyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
 }
