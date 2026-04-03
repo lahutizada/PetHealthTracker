@@ -25,6 +25,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let coordinator = AppCoordinator(window: window)
         self.appCoordinator = coordinator
         coordinator.start()
+//        SessionManager.shared.clearSession()
         
         if let url = connectionOptions.urlContexts.first?.url {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

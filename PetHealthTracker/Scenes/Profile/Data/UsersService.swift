@@ -15,12 +15,10 @@ final class UsersService: UserServicing {
     
     static let shared = UsersService()
     
-    private let baseURL = "http://192.168.1.68:3000"
-    
     private init() {}
     
     func uploadAvatar(image: UIImage) async throws -> AvatarUploadResponse {
-        guard let url = URL(string: "\(baseURL)/users/avatar") else {
+        guard let url = APIClient.shared.makeURL(endpoint: "/users/avatar") else {
             throw URLError(.badURL)
         }
         
@@ -55,6 +53,14 @@ final class UsersService: UserServicing {
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
+        }
+        
+        print("URL:", url.absoluteString)
+        print("Method: POST")
+        print("Status Code:", http.statusCode)
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Response Body:", responseString)
         }
         
         if !(200...299).contains(http.statusCode) {

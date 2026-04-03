@@ -532,8 +532,7 @@ final class AddPetController: BaseController {
                 updateDateText()
             }
             
-            if let photoUrl = pet.photoUrl,
-               let url = URL(string: photoUrl) {
+            if let url = APIClient.shared.makeFullURL(from: pet.photoUrl) {
                 showPetImage(from: url)
             } else {
                 showPlaceholderIcon()

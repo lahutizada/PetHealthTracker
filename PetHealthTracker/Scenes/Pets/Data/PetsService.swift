@@ -11,8 +11,6 @@ final class PetsService: PetsServicing {
     
     static let shared = PetsService()
     
-    private let baseURL = "http://192.168.1.68:3000"
-    
     private init() {}
     
     func getPets() async throws -> [PetResponse] {
@@ -70,7 +68,7 @@ final class PetsService: PetsServicing {
     }
     
     func uploadPetPhoto(petId: String, image: UIImage) async throws -> PetResponse {
-        guard let url = URL(string: "\(baseURL)/pets/\(petId)/photo") else {
+        guard let url = APIClient.shared.makeURL(endpoint: "/pets/\(petId)/photo") else {
             throw URLError(.badURL)
         }
         
@@ -101,10 +99,19 @@ final class PetsService: PetsServicing {
         
         request.httpBody = body
         
+        print("URL:", url.absoluteString)
+        print("Method: POST")
+        
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
+        }
+        
+        print("Status Code:", http.statusCode)
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Response Body:", responseString)
         }
         
         if !(200...299).contains(http.statusCode) {

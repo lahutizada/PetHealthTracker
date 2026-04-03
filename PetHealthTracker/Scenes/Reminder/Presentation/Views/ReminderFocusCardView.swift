@@ -192,11 +192,12 @@ final class ReminderFocusCardView: UIView {
         
         imageView.isHidden = false
         
-        if let photoURL = pet.photoURL, let url = URL(string: photoURL) {
+        if let url = APIClient.shared.makeFullURL(from: pet.photoURL) {
             imageView.cancelImageLoad()
             imageView.contentMode = .scaleAspectFill
             imageView.backgroundColor = .white
             imageView.tintColor = nil
+            imageView.image = nil
             imageView.setImage(from: url)
         } else {
             imageView.cancelImageLoad()

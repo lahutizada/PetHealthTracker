@@ -241,8 +241,7 @@ final class PetCardContentView: UIView {
     }
     
     private func configureImage(photoURL: String?, species: String) {
-        if let photoURL,
-           let url = URL(string: photoURL) {
+        if let url = APIClient.shared.makeFullURL(from: photoURL) {
             petImageView.cancelImageLoad()
             petImageView.tintColor = nil
             petImageView.contentMode = .scaleAspectFill
@@ -261,5 +260,4 @@ final class PetCardContentView: UIView {
     @objc private func actionTapped() {
         onActionTapped?()
     }
-    
 }

@@ -169,8 +169,7 @@ final class RecordPetHeaderView: UIView {
             metaLabel.text = "\(item.breed) • \(formattedAge(item.ageText))"
         }
         
-        if let photoURL = item.photoURL,
-           let url = URL(string: photoURL) {
+        if let url = APIClient.shared.makeFullURL(from: item.photoURL) {
             petImageView.cancelImageLoad()
             petImageView.setImage(from: url)
             petImageView.contentMode = .scaleAspectFill

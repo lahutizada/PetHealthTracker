@@ -411,8 +411,7 @@ final class EditProfileController: BaseController {
     }
     
     private func configureAvatar() {
-        if let avatarUrl = currentUser.avatarUrl,
-           let url = URL(string: avatarUrl) {
+        if let url = APIClient.shared.makeFullURL(from: currentUser.avatarUrl) {
             avatarContainer.backgroundColor = .white
             avatarImageView.isHidden = false
             avatarLabel.isHidden = true

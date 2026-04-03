@@ -11,7 +11,40 @@ final class APIClient {
     
     static let shared = APIClient()
     
-    private let baseURL = "http://192.168.1.68:3000"
+    private init() {}
+    
+    private var hostURL: String {
+        #if targetEnvironment(simulator)
+        return "http://127.0.0.1:3000"
+        #else
+        return "http://192.168.1.88:3000"
+        #endif
+    }
+    
+    func makeURL(endpoint: String) -> URL? {
+        URL(string: hostURL + endpoint)
+    }
+    
+    func makeFullURL(from path: String?) -> URL? {
+        guard let path, !path.isEmpty else { return nil }
+        
+        if path.hasPrefix("http://") || path.hasPrefix("https://") {
+            #if targetEnvironment(simulator)
+            let normalized = path
+                .replacingOccurrences(of: "http://192.168.1.68:3000", with: "http://127.0.0.1:3000")
+                .replacingOccurrences(of: "http://localhost:3000", with: "http://127.0.0.1:3000")
+            return URL(string: normalized)
+            #else
+            return URL(string: path)
+            #endif
+        }
+        
+        if path.hasPrefix("/") {
+            return URL(string: hostURL + path)
+        } else {
+            return URL(string: hostURL + "/" + path)
+        }
+    }
     
     func request<T: Decodable>(
         endpoint: String,
@@ -21,7 +54,7 @@ final class APIClient {
         retryOnUnauthorized: Bool = true
     ) async throws -> T {
         
-        guard let url = URL(string: baseURL + endpoint) else {
+        guard let url = makeURL(endpoint: endpoint) else {
             throw URLError(.badURL)
         }
         
@@ -37,7 +70,7 @@ final class APIClient {
         print("URL:", url.absoluteString)
         print("Method:", method)
         
-        if let body = body,
+        if let body,
            let bodyString = String(data: body, encoding: .utf8) {
             print("Body:", bodyString)
         }
@@ -58,7 +91,7 @@ final class APIClient {
             let refreshed = try await refreshAccessToken()
             
             if refreshed {
-                return try await self.request(
+                return try await request(
                     endpoint: endpoint,
                     method: method,
                     body: body,
@@ -103,7 +136,7 @@ final class APIClient {
             RefreshTokenRequest(refreshToken: refreshToken)
         )
         
-        guard let url = URL(string: baseURL + "/auth/refresh") else {
+        guard let url = makeURL(endpoint: "/auth/refresh") else {
             return false
         }
         

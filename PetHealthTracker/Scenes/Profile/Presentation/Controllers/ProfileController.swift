@@ -378,7 +378,8 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         }
         
         viewModel.onAvatarUploaded = { [weak self] avatarUrl in
-            guard let self, let url = URL(string: avatarUrl) else { return }
+            guard let self else { return }
+            guard let url = APIClient.shared.makeFullURL(from: avatarUrl) else { return }
             
             self.avatarContainer.backgroundColor = .white
             self.avatarImageView.isHidden = false
@@ -426,8 +427,8 @@ final class ProfileController: BaseController, PHPickerViewControllerDelegate {
         
         emailLabel.text = user.email
         
-        if let avatarUrl = user.avatarUrl,
-           let url = URL(string: avatarUrl) {
+        if let url = APIClient.shared.makeFullURL(from: user.avatarUrl) {
+            avatarImageView.cancelImageLoad()
             avatarContainer.backgroundColor = .white
             avatarImageView.isHidden = false
             avatarLabel.isHidden = true

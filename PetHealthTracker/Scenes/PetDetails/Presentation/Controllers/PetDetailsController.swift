@@ -735,8 +735,7 @@ final class PetDetailsController: BaseController {
         let ageText = configureAgeText(from: pet.dob)
         subtitleLabel.text = "\(breed) • \(ageText)"
         
-        if let photoUrl = pet.photoUrl,
-           let url = URL(string: photoUrl) {
+        if let url = APIClient.shared.makeFullURL(from: pet.photoUrl) {
             petImageView.cancelImageLoad()
             petImageView.image = nil
             petImageView.setImage(from: url)
